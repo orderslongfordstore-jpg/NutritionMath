@@ -58,13 +58,13 @@
 - [x] Install the committed dependencies with `npm ci` during baseline verification.
 - [x] Run `npx tsc -b --pretty false`, all 19 tests, and `npm run build` after the current stage-two changes; all exited successfully.
 - [x] Run `git diff --check` and an actual Chromium 390×844 mobile smoke test against localhost.
-- [ ] Verify GitHub Actions on each pushed development commit and record the run URL/result.
+- [x] GitHub Actions `NutritionPro CI` passed for stage-two SHA `edd53625a7f4b60b10caabb41c88523e106d8a95`: https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/43111435208. Continue verifying each later push.
 - [ ] Validate database migrations, live Supabase Auth flows, RLS boundaries, exports and server logs in the confirmed non-production environment.
 - [ ] Document the correct staging/production environment variables and deployment commands; do not change production configuration or deploy without approval.
 
 ## 9. Branch, commit and final delivery — in progress
 
 - [x] Work on `development/nutritionpro-foundation`; do not push development work to `main`.
-- [x] Stage one is committed and pushed to the development branch; stage two is validated locally and awaiting its branch commit/push.
+- [x] Stage one and stage two are committed and pushed to the development branch; latest stage-two commit is `edd53625a7f4b60b10caabb41c88523e106d8a95`.
 - [ ] Commit each remaining verified stage and confirm the remote branch SHA and GitHub Actions result.
 - [ ] Final report must distinguish verified implementation from incomplete work and cover source/schema findings, files changed, tests, commit SHA, Actions result, staging status, deployment readiness and remaining approval items.
