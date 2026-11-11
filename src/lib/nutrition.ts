@@ -1,33 +1,53 @@
 import type { Ingredient, RecipeIngredient, NutritionSummary } from '../types';
 
-function safeNumber(value: number | undefined | null) {
-  if (typeof value !== 'number' || Number.isNaN(value)) {
-    return 0;
-  }
+const nutrients = [
+  'energy',
+  'protein',
+  'carbohydrates',
+  'sugars',
+  'fat',
+  'saturatedFat',
+  'sodium',
+  'fibre',
+] as const;
 
-  return Math.max(0, value);
+type NutrientName = (typeof nutrients)[number];
+type IngredientNutrients = Pick<Ingredient, NutrientName>;
+type NutrientValues = Record<NutrientName, number>;
+
+/** Invalid, negative, or non-finite numeric values contribute zero. */
+function safeNumber(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 0;
 }
 
-export function roundToTwo(value: number) {
+function safeAdd(a: number, b: number): number {
+  const sum = a + b;
+  return Number.isFinite(sum) ? sum : a;
+}
+
+function safeScale(value: number, factor: number): number {
+  const result = value * factor;
+  return Number.isFinite(result) ? result : 0;
+}
+
+export function roundToTwo(value: number): number {
+  if (!Number.isFinite(value)) return 0;
   return Number(value.toFixed(2));
 }
 
-export function calculateIngredientNutrition(
-  ingredient: Pick<Ingredient, 'energy' | 'protein' | 'carbohydrates' | 'sugars' | 'fat' | 'saturatedFat' | 'sodium' | 'fibre'>,
-  grams: number,
-) {
+export function calculateIngredientNutrition(ingredient: IngredientNutrients, grams: number): NutrientValues {
   const safeGrams = safeNumber(grams);
   const factor = safeGrams / 100;
 
   return {
-    energy: roundToTwo(safeNumber(ingredient.energy) * factor),
-    protein: roundToTwo(safeNumber(ingredient.protein) * factor),
-    carbohydrates: roundToTwo(safeNumber(ingredient.carbohydrates) * factor),
-    sugars: roundToTwo(safeNumber(ingredient.sugars) * factor),
-    fat: roundToTwo(safeNumber(ingredient.fat) * factor),
-    saturatedFat: roundToTwo(safeNumber(ingredient.saturatedFat) * factor),
-    sodium: roundToTwo(safeNumber(ingredient.sodium) * factor),
-    fibre: roundToTwo(safeNumber(ingredient.fibre) * factor),
+    energy: roundToTwo(safeScale(safeNumber(ingredient?.energy), factor)),
+    protein: roundToTwo(safeScale(safeNumber(ingredient?.protein), factor)),
+    carbohydrates: roundToTwo(safeScale(safeNumber(ingredient?.carbohydrates), factor)),
+    sugars: roundToTwo(safeScale(safeNumber(ingredient?.sugars), factor)),
+    fat: roundToTwo(safeScale(safeNumber(ingredient?.fat), factor)),
+    saturatedFat: roundToTwo(safeScale(safeNumber(ingredient?.saturatedFat), factor)),
+    sodium: roundToTwo(safeScale(safeNumber(ingredient?.sodium), factor)),
+    fibre: roundToTwo(safeScale(safeNumber(ingredient?.fibre), factor)),
   };
 }
 
@@ -36,19 +56,22 @@ export function calculateRecipeTotals(recipeIngredients: RecipeIngredient[], ser
 
   const totals = recipeIngredients.reduce(
     (acc, item) => {
+      if (!item || !item.ingredient) return acc;
+
+      // Reject invalid weights (including +/-Infinity and NaN) before any scaling or accumulation.
       const quantity = safeNumber(item.quantity);
+      if (quantity === 0) return acc;
+
       const nutrition = calculateIngredientNutrition(item.ingredient, quantity);
-
-      acc.totalWeight += quantity;
-      acc.totalEnergy += nutrition.energy;
-      acc.totalProtein += nutrition.protein;
-      acc.totalCarbohydrate += nutrition.carbohydrates;
-      acc.totalSugar += nutrition.sugars;
-      acc.totalFat += nutrition.fat;
-      acc.totalSaturatedFat += nutrition.saturatedFat;
-      acc.totalSodium += nutrition.sodium;
-      acc.totalFibre += nutrition.fibre;
-
+      acc.totalWeight = safeAdd(acc.totalWeight, quantity);
+      acc.totalEnergy = safeAdd(acc.totalEnergy, nutrition.energy);
+      acc.totalProtein = safeAdd(acc.totalProtein, nutrition.protein);
+      acc.totalCarbohydrate = safeAdd(acc.totalCarbohydrate, nutrition.carbohydrates);
+      acc.totalSugar = safeAdd(acc.totalSugar, nutrition.sugars);
+      acc.totalFat = safeAdd(acc.totalFat, nutrition.fat);
+      acc.totalSaturatedFat = safeAdd(acc.totalSaturatedFat, nutrition.saturatedFat);
+      acc.totalSodium = safeAdd(acc.totalSodium, nutrition.sodium);
+      acc.totalFibre = safeAdd(acc.totalFibre, nutrition.fibre);
       return acc;
     },
     {
@@ -64,26 +87,30 @@ export function calculateRecipeTotals(recipeIngredients: RecipeIngredient[], ser
     },
   );
 
+  const density = (total: number) =>
+    totals.totalWeight > 0 ? roundToTwo(safeScale(total / totals.totalWeight, 100)) : 0;
+  const perServingValue = (total: number) => roundToTwo(total / safeServings);
+
   const per100g = {
-    energy: totals.totalWeight > 0 ? roundToTwo((totals.totalEnergy / totals.totalWeight) * 100) : 0,
-    protein: totals.totalWeight > 0 ? roundToTwo((totals.totalProtein / totals.totalWeight) * 100) : 0,
-    carbohydrates: totals.totalWeight > 0 ? roundToTwo((totals.totalCarbohydrate / totals.totalWeight) * 100) : 0,
-    sugars: totals.totalWeight > 0 ? roundToTwo((totals.totalSugar / totals.totalWeight) * 100) : 0,
-    fat: totals.totalWeight > 0 ? roundToTwo((totals.totalFat / totals.totalWeight) * 100) : 0,
-    saturatedFat: totals.totalWeight > 0 ? roundToTwo((totals.totalSaturatedFat / totals.totalWeight) * 100) : 0,
-    sodium: totals.totalWeight > 0 ? roundToTwo((totals.totalSodium / totals.totalWeight) * 100) : 0,
-    fibre: totals.totalWeight > 0 ? roundToTwo((totals.totalFibre / totals.totalWeight) * 100) : 0,
+    energy: density(totals.totalEnergy),
+    protein: density(totals.totalProtein),
+    carbohydrates: density(totals.totalCarbohydrate),
+    sugars: density(totals.totalSugar),
+    fat: density(totals.totalFat),
+    saturatedFat: density(totals.totalSaturatedFat),
+    sodium: density(totals.totalSodium),
+    fibre: density(totals.totalFibre),
   };
 
   const perServing = {
-    energy: roundToTwo(totals.totalEnergy / safeServings),
-    protein: roundToTwo(totals.totalProtein / safeServings),
-    carbohydrates: roundToTwo(totals.totalCarbohydrate / safeServings),
-    sugars: roundToTwo(totals.totalSugar / safeServings),
-    fat: roundToTwo(totals.totalFat / safeServings),
-    saturatedFat: roundToTwo(totals.totalSaturatedFat / safeServings),
-    sodium: roundToTwo(totals.totalSodium / safeServings),
-    fibre: roundToTwo(totals.totalFibre / safeServings),
+    energy: perServingValue(totals.totalEnergy),
+    protein: perServingValue(totals.totalProtein),
+    carbohydrates: perServingValue(totals.totalCarbohydrate),
+    sugars: perServingValue(totals.totalSugar),
+    fat: perServingValue(totals.totalFat),
+    saturatedFat: perServingValue(totals.totalSaturatedFat),
+    sodium: perServingValue(totals.totalSodium),
+    fibre: perServingValue(totals.totalFibre),
   };
 
   return {
@@ -101,16 +128,7 @@ export function calculateRecipeTotals(recipeIngredients: RecipeIngredient[], ser
   };
 }
 
-export function calculateNipPanel(values: {
-  energy: number;
-  protein: number;
-  carbohydrates: number;
-  sugars: number;
-  fat: number;
-  saturatedFat: number;
-  sodium: number;
-  fibre: number;
-}) {
+export function calculateNipPanel(values: NutrientValues) {
   return {
     energyPer100g: roundToTwo(safeNumber(values.energy)),
     proteinPer100g: roundToTwo(safeNumber(values.protein)),
