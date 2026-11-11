@@ -1,0 +1,20 @@
+type SectionCardProps = {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+};
+
+export function SectionCard({ title, description, children }: SectionCardProps) {
+  return (
+    <section className="section-card">
+      <div className="section-header">
+        <div>
+          <p className="eyebrow">NutritionPro</p>
+          <h2>{title}</h2>
+        </div>
+        {description ? <p>{description}</p> : null}
+      </div>
+      {children}
+    </section>
+  );
+}
