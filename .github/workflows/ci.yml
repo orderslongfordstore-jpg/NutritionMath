@@ -8,6 +8,9 @@ on:
     branches:
       - development/nutritionpro-foundation
 
+permissions:
+  contents: write
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -17,14 +20,32 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          node-version: 22
 
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
+      # package.json currently specifies npm scripts and there is no lockfile.
+      # Generate the npm lockfile using the npm version bundled with Node 22.
+      - name: Generate npm lockfile when missing
+        if: hashFiles('package-lock.json') == ''
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      # On branch pushes, preserve the generated lockfile in source control.
+      # PR jobs do not push changes; they still validate using the generated lock.
+      - name: Commit generated npm lockfile
+        if: github.event_name == 'push' && hashFiles('package-lock.json') != ''
+        run: |
+          if ! git ls-files --error-unmatch package-lock.json >/dev/null 2>&1; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add package-lock.json
+            git commit -m "chore: add npm dependency lockfile"
+            git push
+          fi
+
+      - name: Install dependencies from lockfile
+        run: npm ci --no-audit --no-fund
 
       - name: Run automated tests
         run: npm test
