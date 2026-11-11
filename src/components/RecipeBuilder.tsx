@@ -10,6 +10,9 @@ type RecipeBuilderProps = {
   onServingsChange: (value: string) => void;
   onAddRecipeItem: (ingredient: Ingredient, quantity: number) => void;
   onRecipeChange: (value: RecipeIngredient[]) => void;
+  onExportXlsx: () => void;
+  onExportPdf: () => void;
+  exporting: boolean;
 };
 
 export function RecipeBuilder({
@@ -19,6 +22,9 @@ export function RecipeBuilder({
   onServingsChange,
   onAddRecipeItem,
   onRecipeChange,
+  onExportXlsx,
+  onExportPdf,
+  exporting,
 }: RecipeBuilderProps) {
   const [selectedIngredientId, setSelectedIngredientId] = useState(ingredients[0]?.id ?? '');
   const [quantity, setQuantity] = useState('100');
@@ -108,6 +114,12 @@ export function RecipeBuilder({
           </label>
           <button type="button" className="primary-button" onClick={handleAdd} disabled={ingredients.length === 0}>
             Add ingredient
+          </button>
+          <button type="button" className="secondary-button" onClick={onExportXlsx} disabled={!hasUsableTotals || exporting}>
+            {exporting ? 'Preparing XLSX…' : 'Export recipe worksheet'}
+          </button>
+          <button type="button" className="secondary-button" onClick={onExportPdf} disabled={!hasUsableTotals || exporting}>
+            {exporting ? 'Preparing PDF…' : 'Export PDF worksheet'}
           </button>
           {formError ? <p className="field-error" role="alert">{formError}</p> : null}
         </div>

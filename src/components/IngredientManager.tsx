@@ -24,6 +24,8 @@ type IngredientManagerProps = {
   onSaveIngredient: (ingredient: Ingredient) => void;
   onDeleteIngredient: (ingredientId: string) => void;
   onExportCsv: () => void;
+  onExportXlsx: () => void;
+  exporting: boolean;
 };
 
 const initialForm: IngredientForm = {
@@ -57,7 +59,7 @@ function createIngredientId(): string {
     : `ingredient-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export function IngredientManager({ ingredients, onSaveIngredient, onDeleteIngredient, onExportCsv }: IngredientManagerProps) {
+export function IngredientManager({ ingredients, onSaveIngredient, onDeleteIngredient, onExportCsv, onExportXlsx, exporting }: IngredientManagerProps) {
   const [query, setQuery] = useState('');
   const [form, setForm] = useState<IngredientForm>(initialForm);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -211,6 +213,9 @@ export function IngredientManager({ ingredients, onSaveIngredient, onDeleteIngre
             <button type="submit" className="primary-button">{editingId ? 'Save changes' : 'Add ingredient'}</button>
             {editingId ? <button type="button" className="secondary-button" onClick={resetForm}>Cancel edit</button> : null}
             <button type="button" className="secondary-button" onClick={onExportCsv} disabled={ingredients.length === 0}>Export CSV</button>
+            <button type="button" className="secondary-button" onClick={onExportXlsx} disabled={ingredients.length === 0 || exporting}>
+              {exporting ? 'Preparing XLSX…' : 'Export XLSX'}
+            </button>
           </div>
         </form>
 

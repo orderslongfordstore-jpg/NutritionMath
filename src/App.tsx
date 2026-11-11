@@ -6,6 +6,7 @@ import { RecipeBuilder } from './components/RecipeBuilder';
 import { SectionCard } from './components/SectionCard';
 import { Topbar } from './components/Topbar';
 import { calculateNipPanel, calculateRecipeTotals, roundToTwo } from './lib/nutrition';
+import { downloadIngredientsXlsx, downloadRecipePdf, downloadRecipeXlsx } from './lib/exports';
 import type { Ingredient, RecipeIngredient } from './types';
 import { useAuth } from './context/AuthContext';
 
@@ -23,6 +24,7 @@ function App() {
   const [servings, setServings] = useState('2');
   const [selectedTab, setSelectedTab] = useState<Tab>('dashboard');
   const [statusMessage, setStatusMessage] = useState('No saved records are connected. Changes are kept only for this browser session.');
+  const [isExporting, setIsExporting] = useState(false);
   const { loading: authLoading, user } = useAuth();
 
   const recipeSummary = useMemo(
@@ -100,6 +102,57 @@ function App() {
     setStatusMessage('Ingredient CSV exported from current session data. This is not a saved database export.');
   };
 
+  const handleExportIngredientsXlsx = async () => {
+    if (ingredients.length === 0 || isExporting) return;
+    setIsExporting(true);
+    try {
+      await downloadIngredientsXlsx(ingredients);
+      setStatusMessage('Ingredient XLSX exported from current session data. This is not a saved database export.');
+    } catch {
+      setStatusMessage('The ingredient XLSX export could not be created. Try again or use CSV export.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportRecipeXlsx = async () => {
+    if (isExporting) return;
+    if (recipeIngredients.length === 0) {
+      setStatusMessage('Add recipe ingredients before exporting a worksheet.');
+      return;
+    }
+    if (!recipeSummary.isValid) {
+      setStatusMessage('Review recipe calculation warnings before exporting the worksheet.');
+      return;
+    }
+    setIsExporting(true);
+    try {
+      await downloadRecipeXlsx(recipeIngredients, Number(servings));
+      setStatusMessage('Internal recipe calculation worksheet exported. It is not a validated FSANZ label or NIP.');
+    } catch {
+      setStatusMessage('The recipe XLSX export could not be created. Try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportRecipePdf = async () => {
+    if (isExporting) return;
+    if (recipeIngredients.length === 0 || !recipeSummary.isValid) {
+      setStatusMessage('Add recipe ingredients and review calculation warnings before exporting a worksheet.');
+      return;
+    }
+    setIsExporting(true);
+    try {
+      await downloadRecipePdf(recipeIngredients, Number(servings));
+      setStatusMessage('Internal recipe PDF worksheet exported. It is not a validated FSANZ label or NIP.');
+    } catch {
+      setStatusMessage('The recipe PDF export could not be created. Try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const renderActiveSection = () => {
     const requiresAuth = selectedTab === 'ingredients' || selectedTab === 'recipes' || selectedTab === 'labels';
     if (requiresAuth && authLoading) {
@@ -130,6 +183,8 @@ function App() {
             onSaveIngredient={saveIngredient}
             onDeleteIngredient={deleteIngredient}
             onExportCsv={handleExportCsv}
+            onExportXlsx={handleExportIngredientsXlsx}
+            exporting={isExporting}
           />
         );
       case 'recipes':
@@ -141,6 +196,9 @@ function App() {
             onServingsChange={setServings}
             onAddRecipeItem={addRecipeItem}
             onRecipeChange={setRecipeIngredients}
+            onExportXlsx={handleExportRecipeXlsx}
+            onExportPdf={handleExportRecipePdf}
+            exporting={isExporting}
           />
         );
       case 'accounts':
