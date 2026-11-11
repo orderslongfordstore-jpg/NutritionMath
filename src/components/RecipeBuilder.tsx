@@ -1,141 +1,89 @@
-import { FormEvent, useMemo, useState } from 'react';
-import { Ingredient } from '../types';
+import { useMemo, useState } from 'react';
+import { calculateRecipeTotals, roundToTwo } from '../lib/nutrition';
+import type { Ingredient, RecipeIngredient } from '../types';
 import { SectionCard } from './SectionCard';
 
-type IngredientManagerProps = {
+type RecipeBuilderProps = {
   ingredients: Ingredient[];
-  onAddIngredient: (ingredient: Ingredient) => void;
-  onExportCsv: () => void;
+  recipeIngredients: RecipeIngredient[];
+  onAddRecipeItem: (ingredient: Ingredient, quantity: number) => void;
+  onRecipeChange: (value: RecipeIngredient[]) => void;
 };
 
-const emptyForm = {
-  name: '',
-  energy: '0',
-  protein: '0',
-  carbohydrates: '0',
-  sugars: '0',
-  fat: '0',
-  saturatedFat: '0',
-  sodium: '0',
-  fibre: '0',
-  servingSize: '100',
-  allergens: '',
-};
+export function RecipeBuilder({ ingredients, recipeIngredients, onAddRecipeItem, onRecipeChange }: RecipeBuilderProps) {
+  const [selectedIngredientId, setSelectedIngredientId] = useState(ingredients[0]?.id ?? '');
+  const [quantity, setQuantity] = useState('100');
+  const [servings, setServings] = useState('2');
 
-export function IngredientManager({ ingredients, onAddIngredient, onExportCsv }: IngredientManagerProps) {
-  const [query, setQuery] = useState('');
-  const [form, setForm] = useState(emptyForm);
+  const summary = useMemo(() => calculateRecipeTotals(recipeIngredients, Number(servings) || 1), [recipeIngredients, servings]);
 
-  const filteredIngredients = useMemo(() => {
-    if (!query.trim()) return ingredients;
-    return ingredients.filter((ingredient) => ingredient.name.toLowerCase().includes(query.toLowerCase()));
-  }, [ingredients, query]);
+  const handleAdd = () => {
+    const ingredient = ingredients.find((entry) => entry.id === selectedIngredientId);
+    if (!ingredient) return;
+    onAddRecipeItem(ingredient, Number(quantity) || 0);
+  };
 
-  const handleSubmit = (event: FormEvent) => {
-    event.preventDefault();
-
-    if (!form.name.trim()) {
-      return;
-    }
-
-    const ingredient: Ingredient = {
-      id: `ing-${Date.now()}`,
-      name: form.name.trim(),
-      energy: Number(form.energy),
-      protein: Number(form.protein),
-      carbohydrates: Number(form.carbohydrates),
-      sugars: Number(form.sugars),
-      fat: Number(form.fat),
-      saturatedFat: Number(form.saturatedFat),
-      sodium: Number(form.sodium),
-      fibre: Number(form.fibre),
-      servingSize: Number(form.servingSize) || 100,
-      allergens: form.allergens
-        .split(',')
-        .map((item) => item.trim())
-        .filter(Boolean),
-    };
-
-    onAddIngredient(ingredient);
-    setForm(emptyForm);
+  const updateLineQuantity = (index: number, nextQuantity: number) => {
+    if (nextQuantity <= 0) return;
+    const next = [...recipeIngredients];
+    next[index] = { ...next[index], quantity: nextQuantity };
+    onRecipeChange(next);
   };
 
   return (
-    <SectionCard title="Ingredient database" description="Track nutrient values per 100 g and maintain searchable ingredient records.">
-      <div className="ingredient-layout">
-        <form className="panel-form" onSubmit={handleSubmit}>
-          <div className="two-column-grid">
-            <label>
-              Ingredient name
-              <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
-            </label>
-            <label>
-              Serving size (g)
-              <input value={form.servingSize} onChange={(event) => setForm((current) => ({ ...current, servingSize: event.target.value }))} />
-            </label>
-            <label>
-              Energy (kJ/100 g)
-              <input value={form.energy} onChange={(event) => setForm((current) => ({ ...current, energy: event.target.value }))} />
-            </label>
-            <label>
-              Protein (g/100 g)
-              <input value={form.protein} onChange={(event) => setForm((current) => ({ ...current, protein: event.target.value }))} />
-            </label>
-            <label>
-              Carbohydrate (g/100 g)
-              <input value={form.carbohydrates} onChange={(event) => setForm((current) => ({ ...current, carbohydrates: event.target.value }))} />
-            </label>
-            <label>
-              Sugars (g/100 g)
-              <input value={form.sugars} onChange={(event) => setForm((current) => ({ ...current, sugars: event.target.value }))} />
-            </label>
-            <label>
-              Fat (g/100 g)
-              <input value={form.fat} onChange={(event) => setForm((current) => ({ ...current, fat: event.target.value }))} />
-            </label>
-            <label>
-              Saturated fat (g/100 g)
-              <input value={form.saturatedFat} onChange={(event) => setForm((current) => ({ ...current, saturatedFat: event.target.value }))} />
-            </label>
-            <label>
-              Sodium (mg/100 g)
-              <input value={form.sodium} onChange={(event) => setForm((current) => ({ ...current, sodium: event.target.value }))} />
-            </label>
-            <label>
-              Fibre (g/100 g)
-              <input value={form.fibre} onChange={(event) => setForm((current) => ({ ...current, fibre: event.target.value }))} />
-            </label>
-            <label className="full-span">
-              Allergens
-              <input value={form.allergens} onChange={(event) => setForm((current) => ({ ...current, allergens: event.target.value }))} />
-            </label>
-          </div>
-          <div className="action-row">
-            <button type="submit" className="primary-button">Add ingredient</button>
-            <button type="button" className="secondary-button" onClick={onExportCsv}>Export CSV</button>
-          </div>
-        </form>
-
-        <div className="ingredient-list-panel">
-          <label className="search-box">
-            Search ingredient
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter by name" />
+    <SectionCard title="Recipe calculator" description="Create recipes, adjust batch weights and calculate per-serving nutrition in real time.">
+      <div className="recipe-builder-layout">
+        <div className="panel-form recipe-panel">
+          <label>
+            Ingredient
+            <select value={selectedIngredientId} onChange={(event) => setSelectedIngredientId(event.target.value)}>
+              {ingredients.map((ingredient) => (
+                <option key={ingredient.id} value={ingredient.id}>
+                  {ingredient.name}
+                </option>
+              ))}
+            </select>
           </label>
-          <div className="ingredient-table">
-            {filteredIngredients.map((ingredient) => (
-              <div key={ingredient.id} className="ingredient-row">
-                <div>
-                  <strong>{ingredient.name}</strong>
-                  <small>{ingredient.allergens.join(', ') || 'No declared allergens'}</small>
-                </div>
-                <div className="ingredient-metrics">
-                  <span>{ingredient.energy} kJ</span>
-                  <span>{ingredient.protein} g protein</span>
-                </div>
-              </div>
-            ))}
-          </div>
+          <label>
+            Quantity (g)
+            <input value={quantity} onChange={(event) => setQuantity(event.target.value)} />
+          </label>
+          <label>
+            Servings
+            <input value={servings} onChange={(event) => setServings(event.target.value)} />
+          </label>
+          <button type="button" className="primary-button" onClick={handleAdd}>
+            Add ingredient
+          </button>
         </div>
+
+        <div className="recipe-summary-panel">
+          <div className="summary-row"><span>Total weight</span><strong>{summary.totalWeight} g</strong></div>
+          <div className="summary-row"><span>Energy / serve</span><strong>{summary.perServing.energy} kJ</strong></div>
+          <div className="summary-row"><span>Protein / serve</span><strong>{summary.perServing.protein} g</strong></div>
+          <div className="summary-row"><span>Carbs / 100 g</span><strong>{summary.per100g.carbohydrates} g</strong></div>
+          <div className="summary-row"><span>Sodium / 100 g</span><strong>{summary.per100g.sodium} mg</strong></div>
+        </div>
+      </div>
+
+      <div className="recipe-lines">
+        {recipeIngredients.map((entry, index) => (
+          <div key={`${entry.ingredient.id}-${index}`} className="recipe-line">
+            <div>
+              <strong>{entry.ingredient.name}</strong>
+              <small>{entry.ingredient.allergens.join(', ') || 'No allergens declared'}</small>
+            </div>
+            <div className="recipe-line-controls">
+              <input
+                type="number"
+                min="0"
+                value={entry.quantity}
+                onChange={(event) => updateLineQuantity(index, Number(event.target.value))}
+              />
+              <span>{roundToTwo((entry.quantity / 100) * entry.ingredient.energy)} kJ</span>
+            </div>
+          </div>
+        ))}
       </div>
     </SectionCard>
   );

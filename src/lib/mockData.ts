@@ -1,54 +1,64 @@
-export interface Ingredient {
-  id: string;
-  name: string;
-  code?: string;
-  brand?: string;
-  energy: number;
-  protein: number;
-  carbohydrates: number;
-  sugars: number;
-  fat: number;
-  saturatedFat: number;
-  sodium: number;
-  fibre: number;
-  servingSize: number;
-  allergens: string[];
-  origin?: string;
-}
+import { Ingredient } from '../types';
 
-export interface RecipeIngredient {
-  ingredient: Ingredient;
-  quantity: number;
-}
-
-export interface NutritionSummary {
-  totalWeight: number;
-  totalEnergy: number;
-  totalProtein: number;
-  totalCarbohydrate: number;
-  totalSugar: number;
-  totalFat: number;
-  totalSaturatedFat: number;
-  totalSodium: number;
-  totalFibre: number;
-  per100g: {
-    energy: number;
-    protein: number;
-    carbohydrates: number;
-    sugars: number;
-    fat: number;
-    saturatedFat: number;
-    sodium: number;
-    fibre: number;
-  };
-  perServing: {
-    energy: number;
-    protein: number;
-    carbohydrates: number;
-    sugars: number;
-    fat: number;
-    saturatedFat: number;
-    sodium: number;
-    fibre: number;
-  };
-}
+export const defaultIngredients: Ingredient[] = [
+  {
+    id: 'ing-1',
+    name: 'Rolled oats',
+    energy: 1590,
+    protein: 12.5,
+    carbohydrates: 66.3,
+    sugars: 1.2,
+    fat: 7.2,
+    saturatedFat: 1.4,
+    sodium: 15,
+    fibre: 8.4,
+    servingSize: 40,
+    allergens: ['Gluten'],
+    origin: 'Australian grain',
+  },
+  {
+    id: 'ing-2',
+    name: 'Skim milk powder',
+    energy: 1470,
+    protein: 35,
+    carbohydrates: 52,
+    sugars: 52,
+    fat: 1.2,
+    saturatedFat: 0.8,
+    sodium: 520,
+    fibre: 0,
+    servingSize: 20,
+    allergens: ['Milk'],
+    origin: 'Dairy',
+  },
+  {
+    id: 'ing-3',
+    name: 'Pumpkin seeds',
+    energy: 2580,
+    protein: 30,
+    carbohydrates: 10,
+    sugars: 2,
+    fat: 46.5,
+    saturatedFat: 8,
+    sodium: 30,
+    fibre: 6,
+    servingSize: 20,
+    allergens: ['Sesame'],
+    origin: 'Seasonal',
+  },
+  {
+    id: 'ing-4',
+    name: 'Cinnamon apple mix',
+    energy: 420,
+    protein: 0.6,
+    carbohydrates: 14,
+    sugars: 12.5,
+    fat: 0.7,
+    saturatedFat: 0.2,
+    sodium: 10,
+    fibre: 3.1,
+    servingSize: 100,
+    allergens: [],
+    origin: 'Fruit blend',
+  },
+];

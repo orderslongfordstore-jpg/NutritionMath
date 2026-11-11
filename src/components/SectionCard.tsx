@@ -1,27 +1,22 @@
-import { createClient } from '@supabase/supabase-js';
+import type { ReactNode } from 'react';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+type SectionCardProps = {
+  title: string;
+  description?: string;
+  children: ReactNode;
+};
 
-export const supabase = supabaseUrl && supabaseAnonKey
-  ? createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-      },
-    })
-  : null;
-
-export function getSupabaseStatus() {
-  if (!supabase) {
-    return {
-      configured: false,
-      message: 'Supabase environment variables are not configured for local development.',
-    };
-  }
-
-  return {
-    configured: true,
-    message: 'Supabase client ready for authenticated data access.',
-  };
+export function SectionCard({ title, description, children }: SectionCardProps) {
+  return (
+    <section className="section-card">
+      <div className="section-header">
+        <div>
+          <p className="eyebrow">NutritionPro</p>
+          <h2>{title}</h2>
+        </div>
+        {description ? <p>{description}</p> : null}
+      </div>
+      {children}
+    </section>
+  );
 }

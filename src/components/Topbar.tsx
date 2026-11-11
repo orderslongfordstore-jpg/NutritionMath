@@ -1,20 +1,39 @@
-type SectionCardProps = {
-  title: string;
-  description?: string;
-  children: React.ReactNode;
+type TopbarProps = {
+  activeTab: 'dashboard' | 'ingredients' | 'recipes' | 'accounts' | 'labels';
+  onTabChange: (tab: 'dashboard' | 'ingredients' | 'recipes' | 'accounts' | 'labels') => void;
 };
 
-export function SectionCard({ title, description, children }: SectionCardProps) {
+const tabs = [
+  { key: 'dashboard', label: 'Dashboard' },
+  { key: 'ingredients', label: 'Ingredients' },
+  { key: 'recipes', label: 'Recipes' },
+  { key: 'accounts', label: 'Accounts' },
+  { key: 'labels', label: 'Labels' },
+] as const;
+
+export function Topbar({ activeTab, onTabChange }: TopbarProps) {
   return (
-    <section className="section-card">
-      <div className="section-header">
+    <header className="topbar">
+      <div className="brand-block">
+        <div className="brand-mark">NP</div>
         <div>
-          <p className="eyebrow">NutritionPro</p>
-          <h2>{title}</h2>
+          <p className="eyebrow">Australian nutrition</p>
+          <strong>NutritionPro</strong>
         </div>
-        {description ? <p>{description}</p> : null}
       </div>
-      {children}
-    </section>
+
+      <nav className="tab-nav" aria-label="Main navigation">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            className={tab.key === activeTab ? 'nav-link active' : 'nav-link'}
+            onClick={() => onTabChange(tab.key)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
+    </header>
   );
 }

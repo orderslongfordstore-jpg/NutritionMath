@@ -1,0 +1,33 @@
+name: NutritionPro CI
+
+on:
+  push:
+    branches:
+      - development/nutritionpro-foundation
+  pull_request:
+    branches:
+      - development/nutritionpro-foundation
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Run automated tests
+        run: npm test
+
+      - name: Run production build
+        run: npm run build
