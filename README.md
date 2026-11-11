@@ -1,53 +1,34 @@
 # NutritionPro
 
-NutritionPro is a production-focused Australian nutrition platform for ingredient intelligence, recipe calculation and food-label workflows. This repository is the clean development foundation for the NutritionPro application; the official production application remains served separately and must not be modified during this rebuild.
+NutritionPro is intended to help Australian food businesses manage ingredients, recipes, nutrition calculations, panels, and label workflows. This GitHub repository is the development codebase (`NutritionMath`); the product name remains **NutritionPro**. The live Render website is reference-only and must not be overwritten during development.
 
-## Current repository status
+## Current development status
 
-This repository was created as a minimal foundation. At the time of audit it contained only a README and `.gitignore` file and no application source or deployment configuration. The rebuild in this branch creates the base application foundation for a production-ready web app in React + TypeScript + Vite, with Supabase integration prepared without touching production data.
+This branch contains an early React, TypeScript, and Vite prototype. Ingredient and recipe edits are currently held in browser memory, and the label area contains example-only content. The Supabase client is configured as an optional browser client, but registration, login, password recovery, persistent data access, owner-specific authorization, generated labels, PDF/Excel exports, and database migrations are not complete. The panel preview is not a regulatory compliance determination.
 
-## Architecture
-
-- Frontend: React + TypeScript + Vite
-- Styling: mobile-first, black/white/yellow NutritionPro branding
-- Data layer: Supabase client prepared through environment variables
-- Security: anon-key only in frontend; service-role keys never exposed client-side
-- Testing: Vitest + Testing Library for nutrition and app logic
-- Build: production build for Render deployment
+Follow `TODO.md` for current acceptance criteria and completion status. Do not present this prototype as production-ready while any required outcome remains open.
 
 ## Local development
 
-1. Copy `.env.example` to `.env.local` and fill in the Supabase values.
-2. Install dependencies:
-   npm install
-3. Start the app:
-   npm run dev
-4. Run tests:
-   npm test
-5. Create a production build:
-   npm run build
+1. Use Node.js 22 or a compatible current LTS release.
+2. Install exactly from the committed lockfile with `npm ci`.
+3. Run the local app with `npm run dev`.
+4. Run all unit tests with `npm test`.
+5. Run the TypeScript project check with `npx tsc -b --pretty false`.
+6. Create a production bundle with `npm run build`.
 
-## Production deployment
+The build output is written to `dist/`.
 
-The app is prepared for Render deployment through a static site configuration. The existing production NutritionPro deployment is not modified during development.
+## Supabase configuration and data safety
 
-## Important constraints
+`.env.example` documents browser-visible values only: `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. Vite embeds `VITE_*` values in the browser bundle. Never put a service-role key, database password, or other server secret in a `VITE_*` value, source file, or GitHub commit.
 
-- No service-role credentials are stored in frontend code.
-- The production Supabase database is not reset, overwritten, or modified.
-- The app is built as a clean NutritionPro foundation, with a future migration plan to inspect and map existing production data before any cutover.
-- This repository must remain the development archive and should not be confused with the live production application.
+Use a confirmed development/staging Supabase project for local integration. Do not use the production NutritionPro project, create production accounts, apply production migrations, or alter production data during development. The currently accessible `NutrientsMath` project is only an unconfirmed staging candidate; do not write to it until its role has been confirmed. No credentials are included in this repository.
 
-## Roadmap
+## Render preparation
 
-1. Foundation app shell and branding
-2. Ingredient management and nutrition logic
-3. Recipe calculation and batch workflows
-4. Nutrition panel generation and label preview
-5. Auth and Supabase integration preparation
-6. Migration planning for existing live data
-7. Final Render deployment after validation
+The existing Render production service tracks `main`; do not push development work to `main` or trigger a production deploy. The current Vite production command is `npm run build` and the static output is `dist/`. A separate, reviewed staging service and its environment settings must be established before external integration testing. This repository does not claim to contain a completed Render deployment configuration.
 
-## Notes
+## Validation record
 
-The calculation logic in the foundation is intentionally testable and local-first, so it can be validated before connecting to live Supabase data or production migration scripts.
+At the original audited commit `5d8c5fd8f40a375e1cf980b6bdcd5ad0cc7c5799`, TypeScript and the production build failed because the Vite config imported `defineConfig` from `vite` while declaring Vitest's `test` field. The entry point also imported a stylesheet that was missing from the repository. Stage-one work on this development branch corrects both issues. Re-run all checks after every later change; the authoritative results are the latest local run and GitHub Actions run, not this historical note.
