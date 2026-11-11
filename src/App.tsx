@@ -7,6 +7,7 @@ import { SectionCard } from './components/SectionCard';
 import { Topbar } from './components/Topbar';
 import { calculateNipPanel, calculateRecipeTotals, roundToTwo } from './lib/nutrition';
 import type { Ingredient, RecipeIngredient } from './types';
+import { useAuth } from './context/AuthContext';
 
 type Tab = 'dashboard' | 'ingredients' | 'recipes' | 'accounts' | 'labels';
 
@@ -22,6 +23,7 @@ function App() {
   const [servings, setServings] = useState('2');
   const [selectedTab, setSelectedTab] = useState<Tab>('dashboard');
   const [statusMessage, setStatusMessage] = useState('No saved records are connected. Changes are kept only for this browser session.');
+  const { loading: authLoading, user } = useAuth();
 
   const recipeSummary = useMemo(
     () => calculateRecipeTotals(recipeIngredients, Number(servings)),
@@ -99,6 +101,27 @@ function App() {
   };
 
   const renderActiveSection = () => {
+    const requiresAuth = selectedTab === 'ingredients' || selectedTab === 'recipes' || selectedTab === 'labels';
+    if (requiresAuth && authLoading) {
+      return (
+        <SectionCard title="Checking account access" description="Private NutritionPro sections require an authenticated session.">
+          <p className="empty-state" role="status" aria-live="polite">Restoring the saved sign-in session…</p>
+        </SectionCard>
+      );
+    }
+    if (requiresAuth && !user) {
+      return (
+        <SectionCard title="Sign in required" description="Ingredient, recipe and label workspaces are protected behind Supabase Auth.">
+          <div className="auth-gate">
+            <p role="status">Sign in to access private NutritionPro workspaces. No saved database records are available in this disconnected development build.</p>
+            <button type="button" className="primary-button" onClick={() => setSelectedTab('accounts')}>
+              Open account access
+            </button>
+          </div>
+        </SectionCard>
+      );
+    }
+
     switch (selectedTab) {
       case 'ingredients':
         return (

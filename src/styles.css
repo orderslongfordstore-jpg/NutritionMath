@@ -179,6 +179,21 @@ input:hover, select:hover { border-color: #8b8b80; }
 .auth-status-panel h3 { margin: 0 0 12px; font-size: 15px; }
 .auth-status-panel ul { display: grid; gap: 9px; margin: 0; padding-left: 18px; color: #4c4c46; font-size: 12px; line-height: 1.5; }
 .auth-status-panel p { margin: 16px 0 0; padding-top: 13px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; line-height: 1.5; }
+.auth-form-wrap { display: grid; max-width: 520px; gap: 14px; }
+.auth-form { display: grid; gap: 14px; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: #fbfbf8; }
+.auth-form label { display: grid; gap: 7px; color: #33332e; font-size: 12px; font-weight: 800; }
+.auth-form > .primary-button { justify-self: start; }
+.auth-mode-links { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.auth-link { min-height: 38px; padding: 0 4px; border: 0; background: transparent; color: #4c3e00; font-size: 12px; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.auth-link:hover { color: #171717; }
+.auth-session-panel { display: grid; max-width: 620px; gap: 16px; padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: #fbfbf8; }
+.auth-session-panel h3 { margin: 0; font-size: 20px; overflow-wrap: anywhere; }
+.auth-session-panel p:not(.eyebrow) { margin: 8px 0 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+.auth-error, .auth-notice { margin: 0; padding: 10px 12px; border-radius: 9px; font-size: 12px; line-height: 1.5; }
+.auth-error { border: 1px solid #e4b7b7; background: #fff0f0; color: var(--danger); }
+.auth-notice { border: 1px solid #c7dccb; background: #eef6ef; color: #195737; }
+.auth-gate { display: grid; justify-items: start; gap: 16px; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: #fbfbf8; }
+.auth-gate p { max-width: 640px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
 
 @media (max-width: 920px) {
   .topbar { align-items: flex-start; flex-direction: column; gap: 10px; padding-top: 12px; padding-bottom: 10px; }
