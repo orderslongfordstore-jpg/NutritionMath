@@ -1,4 +1,9 @@
-import type { Ingredient, RecipeIngredient, NutritionSummary } from '../types';
+import type {
+  Ingredient,
+  NutritionCalculationIssue,
+  NutritionSummary,
+  RecipeIngredient,
+} from '../types';
 
 const nutrients = [
   'energy',
@@ -14,20 +19,89 @@ const nutrients = [
 type NutrientName = (typeof nutrients)[number];
 type IngredientNutrients = Pick<Ingredient, NutrientName>;
 type NutrientValues = Record<NutrientName, number>;
+type Totals = Omit<NutritionSummary, 'per100g' | 'perServing' | 'isValid' | 'issues'>;
 
-/** Invalid, negative, or non-finite numeric values contribute zero. */
-function safeNumber(value: unknown): number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 0;
+const nutrientLabels: Record<NutrientName, string> = {
+  energy: 'Energy',
+  protein: 'Protein',
+  carbohydrates: 'Carbohydrate',
+  sugars: 'Sugars',
+  fat: 'Fat',
+  saturatedFat: 'Saturated fat',
+  sodium: 'Sodium',
+  fibre: 'Fibre',
+};
+
+// Values beyond this magnitude cannot retain useful gram-level numeric precision.
+const MAX_CALCULATION_VALUE = Number.MAX_SAFE_INTEGER;
+
+function isSafeNonNegative(value: unknown): value is number {
+  return typeof value === 'number'
+    && Number.isFinite(value)
+    && value >= 0
+    && value <= MAX_CALCULATION_VALUE;
 }
 
-function safeAdd(a: number, b: number): number {
+function isValidServingCount(value: unknown): value is number {
+  return isSafeNonNegative(value) && Number.isInteger(value) && value >= 1;
+}
+
+/** Invalid, negative, non-finite, or precision-exceeding values contribute zero. */
+function safeNumber(value: unknown): number {
+  return isSafeNonNegative(value) ? value : 0;
+}
+
+function addIssue(
+  issues: NutritionCalculationIssue[],
+  code: string,
+  severity: NutritionCalculationIssue['severity'],
+  message: string,
+  itemIndex?: number,
+  nutrient?: string,
+): void {
+  issues.push({ code, severity, message, itemIndex, nutrient });
+}
+
+function safeAdd(
+  a: number,
+  b: number,
+  label: string,
+  issues: NutritionCalculationIssue[],
+  itemIndex: number,
+): number {
   const sum = a + b;
-  return Number.isFinite(sum) ? sum : a;
+  if (!isSafeNonNegative(sum)) {
+    addIssue(
+      issues,
+      'numeric_overflow',
+      'error',
+      `${label} exceeds the supported calculation range at ingredient ${itemIndex + 1}.`,
+      itemIndex,
+    );
+    return a;
+  }
+  return sum;
 }
 
 function safeScale(value: number, factor: number): number {
   const result = value * factor;
-  return Number.isFinite(result) ? result : 0;
+  return isSafeNonNegative(result) ? result : 0;
+}
+
+function safeQuotient(
+  numerator: number,
+  denominator: number,
+  multiplier: number,
+  label: string,
+  issues: NutritionCalculationIssue[],
+): number {
+  if (denominator <= 0) return 0;
+  const result = (numerator / denominator) * multiplier;
+  if (!isSafeNonNegative(result)) {
+    addIssue(issues, 'numeric_overflow', 'error', `${label} is outside the supported calculation range.`);
+    return 0;
+  }
+  return roundToTwo(result);
 }
 
 export function roundToTwo(value: number): number {
@@ -51,66 +125,128 @@ export function calculateIngredientNutrition(ingredient: IngredientNutrients, gr
   };
 }
 
-export function calculateRecipeTotals(recipeIngredients: RecipeIngredient[], servings = 1): NutritionSummary {
-  const safeServings = safeNumber(servings) > 0 ? safeNumber(servings) : 1;
+export function calculateRecipeTotals(
+  recipeIngredients: RecipeIngredient[] | null | undefined,
+  servings = 1,
+): NutritionSummary {
+  const issues: NutritionCalculationIssue[] = [];
+  const entries = Array.isArray(recipeIngredients) ? recipeIngredients : [];
 
-  const totals = recipeIngredients.reduce(
-    (acc, item) => {
-      if (!item || !item.ingredient) return acc;
+  if (!Array.isArray(recipeIngredients)) {
+    addIssue(issues, 'invalid_recipe', 'error', 'Recipe ingredients must be provided as a list.');
+  } else if (entries.length === 0) {
+    addIssue(issues, 'empty_recipe', 'warning', 'Add at least one ingredient before using these totals.');
+  }
 
-      // Reject invalid weights (including +/-Infinity and NaN) before any scaling or accumulation.
-      const quantity = safeNumber(item.quantity);
-      if (quantity === 0) return acc;
+  const safeServings = isValidServingCount(servings) ? servings : 1;
+  if (!isValidServingCount(servings)) {
+    addIssue(issues, 'invalid_servings', 'error', 'Serving count must be a finite positive whole number within the supported range.');
+  }
 
-      const nutrition = calculateIngredientNutrition(item.ingredient, quantity);
-      acc.totalWeight = safeAdd(acc.totalWeight, quantity);
-      acc.totalEnergy = safeAdd(acc.totalEnergy, nutrition.energy);
-      acc.totalProtein = safeAdd(acc.totalProtein, nutrition.protein);
-      acc.totalCarbohydrate = safeAdd(acc.totalCarbohydrate, nutrition.carbohydrates);
-      acc.totalSugar = safeAdd(acc.totalSugar, nutrition.sugars);
-      acc.totalFat = safeAdd(acc.totalFat, nutrition.fat);
-      acc.totalSaturatedFat = safeAdd(acc.totalSaturatedFat, nutrition.saturatedFat);
-      acc.totalSodium = safeAdd(acc.totalSodium, nutrition.sodium);
-      acc.totalFibre = safeAdd(acc.totalFibre, nutrition.fibre);
+  const totals = entries.reduce<Totals>((acc, item, itemIndex) => {
+    if (!item || typeof item !== 'object' || !item.ingredient) {
+      addIssue(issues, 'missing_ingredient', 'error', `Recipe row ${itemIndex + 1} has no ingredient.`, itemIndex);
       return acc;
-    },
-    {
-      totalWeight: 0,
-      totalEnergy: 0,
-      totalProtein: 0,
-      totalCarbohydrate: 0,
-      totalSugar: 0,
-      totalFat: 0,
-      totalSaturatedFat: 0,
-      totalSodium: 0,
-      totalFibre: 0,
-    },
-  );
+    }
 
-  const density = (total: number) =>
-    totals.totalWeight > 0 ? roundToTwo(safeScale(total / totals.totalWeight, 100)) : 0;
-  const perServingValue = (total: number) => roundToTwo(total / safeServings);
+    const quantity = item.quantity;
+    if (!isSafeNonNegative(quantity)) {
+      addIssue(
+        issues,
+        'invalid_quantity',
+        'error',
+        `Ingredient quantity in row ${itemIndex + 1} must be finite, non-negative, and within the supported range.`,
+        itemIndex,
+      );
+      return acc;
+    }
+    if (quantity === 0) {
+      addIssue(issues, 'zero_quantity', 'warning', `Ingredient quantity in row ${itemIndex + 1} is zero and was ignored.`, itemIndex);
+      return acc;
+    }
+
+    const factor = quantity / 100;
+    const rawIngredient = item.ingredient as unknown as Record<string, unknown>;
+    for (const nutrient of nutrients) {
+      const value = rawIngredient[nutrient];
+      if (value === undefined || value === null) {
+        addIssue(
+          issues,
+          'missing_nutrient',
+          'warning',
+          `${nutrientLabels[nutrient]} is missing for ingredient ${item.ingredient.name || itemIndex + 1}.`,
+          itemIndex,
+          nutrient,
+        );
+      } else if (!isSafeNonNegative(value)) {
+        addIssue(
+          issues,
+          'invalid_nutrient',
+          'error',
+          `${nutrientLabels[nutrient]} for ingredient ${item.ingredient.name || itemIndex + 1} must be finite and non-negative.`,
+          itemIndex,
+          nutrient,
+        );
+      } else if (!isSafeNonNegative(value * factor)) {
+        addIssue(
+          issues,
+          'numeric_overflow',
+          'error',
+          `${nutrientLabels[nutrient]} for ingredient ${item.ingredient.name || itemIndex + 1} exceeds the supported calculation range.`,
+          itemIndex,
+          nutrient,
+        );
+      }
+    }
+
+    const nutrition = calculateIngredientNutrition(item.ingredient, quantity);
+    acc.totalWeight = safeAdd(acc.totalWeight, quantity, 'Recipe weight', issues, itemIndex);
+    acc.totalEnergy = safeAdd(acc.totalEnergy, nutrition.energy, 'Energy total', issues, itemIndex);
+    acc.totalProtein = safeAdd(acc.totalProtein, nutrition.protein, 'Protein total', issues, itemIndex);
+    acc.totalCarbohydrate = safeAdd(acc.totalCarbohydrate, nutrition.carbohydrates, 'Carbohydrate total', issues, itemIndex);
+    acc.totalSugar = safeAdd(acc.totalSugar, nutrition.sugars, 'Sugar total', issues, itemIndex);
+    acc.totalFat = safeAdd(acc.totalFat, nutrition.fat, 'Fat total', issues, itemIndex);
+    acc.totalSaturatedFat = safeAdd(acc.totalSaturatedFat, nutrition.saturatedFat, 'Saturated fat total', issues, itemIndex);
+    acc.totalSodium = safeAdd(acc.totalSodium, nutrition.sodium, 'Sodium total', issues, itemIndex);
+    acc.totalFibre = safeAdd(acc.totalFibre, nutrition.fibre, 'Fibre total', issues, itemIndex);
+    return acc;
+  }, {
+    totalWeight: 0,
+    totalEnergy: 0,
+    totalProtein: 0,
+    totalCarbohydrate: 0,
+    totalSugar: 0,
+    totalFat: 0,
+    totalSaturatedFat: 0,
+    totalSodium: 0,
+    totalFibre: 0,
+  });
+
+  const density = (total: number, label: string) =>
+    safeQuotient(total, totals.totalWeight, 100, `${label} per 100 g`, issues);
+  const perServingValue = (total: number, label: string) =>
+    safeQuotient(total, safeServings, 1, `${label} per serving`, issues);
 
   const per100g = {
-    energy: density(totals.totalEnergy),
-    protein: density(totals.totalProtein),
-    carbohydrates: density(totals.totalCarbohydrate),
-    sugars: density(totals.totalSugar),
-    fat: density(totals.totalFat),
-    saturatedFat: density(totals.totalSaturatedFat),
-    sodium: density(totals.totalSodium),
-    fibre: density(totals.totalFibre),
+    energy: density(totals.totalEnergy, 'Energy'),
+    protein: density(totals.totalProtein, 'Protein'),
+    carbohydrates: density(totals.totalCarbohydrate, 'Carbohydrate'),
+    sugars: density(totals.totalSugar, 'Sugars'),
+    fat: density(totals.totalFat, 'Fat'),
+    saturatedFat: density(totals.totalSaturatedFat, 'Saturated fat'),
+    sodium: density(totals.totalSodium, 'Sodium'),
+    fibre: density(totals.totalFibre, 'Fibre'),
   };
 
   const perServing = {
-    energy: perServingValue(totals.totalEnergy),
-    protein: perServingValue(totals.totalProtein),
-    carbohydrates: perServingValue(totals.totalCarbohydrate),
-    sugars: perServingValue(totals.totalSugar),
-    fat: perServingValue(totals.totalFat),
-    saturatedFat: perServingValue(totals.totalSaturatedFat),
-    sodium: perServingValue(totals.totalSodium),
-    fibre: perServingValue(totals.totalFibre),
+    energy: perServingValue(totals.totalEnergy, 'Energy'),
+    protein: perServingValue(totals.totalProtein, 'Protein'),
+    carbohydrates: perServingValue(totals.totalCarbohydrate, 'Carbohydrate'),
+    sugars: perServingValue(totals.totalSugar, 'Sugars'),
+    fat: perServingValue(totals.totalFat, 'Fat'),
+    saturatedFat: perServingValue(totals.totalSaturatedFat, 'Saturated fat'),
+    sodium: perServingValue(totals.totalSodium, 'Sodium'),
+    fibre: perServingValue(totals.totalFibre, 'Fibre'),
   };
 
   return {
@@ -125,6 +261,8 @@ export function calculateRecipeTotals(recipeIngredients: RecipeIngredient[], ser
     totalFibre: roundToTwo(totals.totalFibre),
     per100g,
     perServing,
+    isValid: issues.length === 0,
+    issues,
   };
 }
 

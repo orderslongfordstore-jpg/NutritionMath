@@ -4,7 +4,7 @@ NutritionPro is intended to help Australian food businesses manage ingredients, 
 
 ## Current development status
 
-This branch contains an early React, TypeScript, and Vite prototype. Ingredient and recipe edits are currently held in browser memory, and the label area contains example-only content. The Supabase client is configured as an optional browser client, but registration, login, password recovery, persistent data access, owner-specific authorization, generated labels, PDF/Excel exports, and database migrations are not complete. The panel preview is not a regulatory compliance determination.
+This branch contains an early React, TypeScript, and Vite prototype. Ingredient create/edit/delete/search, CSV export, and recipe-draft calculations work only in the current browser session; there is no database persistence yet. The label screen is an honest empty state, not an example label. Supabase registration, login, password recovery, persistent data access, owner-specific authorization, generated labels, `.xlsx`/PDF exports, and database migrations are not complete. Nutrition previews are internal arithmetic, not a regulatory compliance determination.
 
 Follow `TODO.md` for current acceptance criteria and completion status. Do not present this prototype as production-ready while any required outcome remains open.
 

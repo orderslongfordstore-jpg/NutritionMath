@@ -4,7 +4,7 @@ import {
   calculateRecipeTotals,
   roundToTwo,
 } from '../lib/nutrition';
-import type { Ingredient } from '../types';
+import type { Ingredient, NutritionSummary } from '../types';
 
 const oats: Ingredient = {
   id: 'oats', name: 'Oats', energy: 1500, protein: 12, carbohydrates: 65,
@@ -16,6 +16,22 @@ const milk: Ingredient = {
   sugars: 5, fat: 1, saturatedFat: 0.5, sodium: 40, fibre: 0,
   servingSize: 100, allergens: ['Milk'],
 };
+
+function allReportedNumbersAreFinite(result: NutritionSummary): boolean {
+  return [
+    result.totalWeight,
+    result.totalEnergy,
+    result.totalProtein,
+    result.totalCarbohydrate,
+    result.totalSugar,
+    result.totalFat,
+    result.totalSaturatedFat,
+    result.totalSodium,
+    result.totalFibre,
+    ...Object.values(result.per100g),
+    ...Object.values(result.perServing),
+  ].every(Number.isFinite);
+}
 
 describe('nutrition calculations', () => {
   it('scales ingredient nutrients and energy according to grams', () => {
@@ -33,6 +49,8 @@ describe('nutrition calculations', () => {
     expect(result.totalWeight).toBe(300);
     expect(result.totalEnergy).toBe(3250);
     expect(result.totalProtein).toBe(27.5);
+    expect(result.isValid).toBe(true);
+    expect(result.issues).toEqual([]);
   });
 
   it('calculates nutrition per 100 g using weighted ingredient amounts', () => {
@@ -64,11 +82,14 @@ describe('nutrition calculations', () => {
     expect(doubleBatch.per100g.energy).toBe(oneBatch.per100g.energy);
   });
 
-  it('returns zero nutrient densities for a zero-weight recipe', () => {
+  it('returns finite zero values and marks an empty recipe as incomplete', () => {
     const result = calculateRecipeTotals([]);
     expect(result.totalWeight).toBe(0);
     expect(result.per100g.energy).toBe(0);
     expect(result.per100g.protein).toBe(0);
+    expect(result.isValid).toBe(false);
+    expect(result.issues.some((issue) => issue.code === 'empty_recipe')).toBe(true);
+    expect(allReportedNumbersAreFinite(result)).toBe(true);
   });
 
   it('handles negative, NaN and infinite input quantities safely', () => {
@@ -79,7 +100,16 @@ describe('nutrition calculations', () => {
     }
   });
 
-  it('prevents invalid recipe quantities from contaminating totals', () => {
+  it('flags invalid recipe quantities instead of silently treating them as valid', () => {
+    for (const invalidQuantity of [-10, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      const result = calculateRecipeTotals([{ ingredient: oats, quantity: invalidQuantity }], 1);
+      expect(result.isValid).toBe(false);
+      expect(result.issues.some((issue) => issue.code === 'invalid_quantity')).toBe(true);
+      expect(allReportedNumbersAreFinite(result)).toBe(true);
+    }
+  });
+
+  it('prevents invalid recipe quantities from contaminating numeric totals', () => {
     const result = calculateRecipeTotals([
       { ingredient: oats, quantity: 100 },
       { ingredient: milk, quantity: Number.POSITIVE_INFINITY },
@@ -88,27 +118,40 @@ describe('nutrition calculations', () => {
     ]);
     expect(result.totalWeight).toBe(100);
     expect(result.totalEnergy).toBe(1500);
-    expect(Object.values(result.per100g).every(Number.isFinite)).toBe(true);
+    expect(result.isValid).toBe(false);
+    expect(result.issues.filter((issue) => issue.code === 'invalid_quantity')).toHaveLength(3);
+    expect(allReportedNumbersAreFinite(result)).toBe(true);
   });
 
-  it('treats negative, NaN and infinite nutrient values as zero', () => {
+  it('treats a zero quantity as an explicit review issue', () => {
+    const result = calculateRecipeTotals([{ ingredient: oats, quantity: 0 }], 1);
+    expect(result.totalWeight).toBe(0);
+    expect(result.isValid).toBe(false);
+    expect(result.issues.some((issue) => issue.code === 'zero_quantity')).toBe(true);
+    expect(allReportedNumbersAreFinite(result)).toBe(true);
+  });
+
+  it('reports missing and invalid nutrient values rather than silently accepting them', () => {
+    const missingProtein = { ...oats, protein: undefined } as unknown as Ingredient;
+    const missing = calculateRecipeTotals([{ ingredient: missingProtein, quantity: 100 }], 1);
+    expect(missing.isValid).toBe(false);
+    expect(missing.issues).toContainEqual(expect.objectContaining({ code: 'missing_nutrient', nutrient: 'protein' }));
+    expect(missing.perServing.protein).toBe(0);
+
     const invalidNutrients = {
+      ...oats,
       energy: Number.POSITIVE_INFINITY,
       protein: Number.NaN,
       carbohydrates: -1,
       sugars: Number.NEGATIVE_INFINITY,
-      fat: 4,
-      saturatedFat: 1,
-      sodium: 20,
-      fibre: 2,
-    };
-    expect(calculateIngredientNutrition(invalidNutrients, 100)).toEqual({
-      energy: 0, protein: 0, carbohydrates: 0, sugars: 0,
-      fat: 4, saturatedFat: 1, sodium: 20, fibre: 2,
-    });
+    } as Ingredient;
+    const invalid = calculateRecipeTotals([{ ingredient: invalidNutrients, quantity: 100 }], 1);
+    expect(invalid.isValid).toBe(false);
+    expect(invalid.issues.filter((issue) => issue.code === 'invalid_nutrient')).toHaveLength(4);
+    expect(allReportedNumbersAreFinite(invalid)).toBe(true);
   });
 
-  it('prevents overflow from invalidly large nutrient values', () => {
+  it('prevents overflow from invalidly large ingredient nutrient values', () => {
     const result = calculateIngredientNutrition({
       energy: Number.MAX_VALUE, protein: 1, carbohydrates: 1, sugars: 1,
       fat: 1, saturatedFat: 1, sodium: 1, fibre: 1,
@@ -117,8 +160,54 @@ describe('nutrition calculations', () => {
     expect(Object.values(result).every(Number.isFinite)).toBe(true);
   });
 
-  it('uses a safe serving count for zero servings', () => {
-    expect(calculateRecipeTotals([{ ingredient: oats, quantity: 100 }], 0).perServing.energy).toBe(1500);
+  it('reports finite inputs whose scaled nutrient contribution exceeds the supported range', () => {
+    const extremeIngredient = { ...oats, energy: Number.MAX_SAFE_INTEGER / 2 };
+    const result = calculateRecipeTotals([{ ingredient: extremeIngredient, quantity: 300 }], 1);
+    expect(result.isValid).toBe(false);
+    expect(result.issues).toContainEqual(expect.objectContaining({ code: 'numeric_overflow', nutrient: 'energy' }));
+    expect(result.totalEnergy).toBe(0);
+    expect(allReportedNumbersAreFinite(result)).toBe(true);
+  });
+
+  it('reports accumulated recipe-weight overflow rather than dropping it silently', () => {
+    const zeroNutrientIngredient = {
+      ...oats,
+      energy: 0,
+      protein: 0,
+      carbohydrates: 0,
+      sugars: 0,
+      fat: 0,
+      saturatedFat: 0,
+      sodium: 0,
+      fibre: 0,
+    };
+    const quantity = Number.MAX_SAFE_INTEGER * 0.6;
+    const result = calculateRecipeTotals([
+      { ingredient: zeroNutrientIngredient, quantity },
+      { ingredient: zeroNutrientIngredient, quantity },
+    ], 1);
+    expect(result.isValid).toBe(false);
+    expect(result.issues).toContainEqual(expect.objectContaining({ code: 'numeric_overflow' }));
+    expect(allReportedNumbersAreFinite(result)).toBe(true);
+  });
+
+  it('uses a safe finite fallback for zero or invalid serving counts and reports the issue', () => {
+    for (const servings of [0, -2, 1.5, Number.MIN_VALUE, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.MAX_SAFE_INTEGER * 2]) {
+      const result = calculateRecipeTotals([{ ingredient: oats, quantity: 100 }], servings);
+      expect(result.perServing.energy).toBe(1500);
+      expect(result.isValid).toBe(false);
+      expect(result.issues.some((issue) => issue.code === 'invalid_servings')).toBe(true);
+      expect(allReportedNumbersAreFinite(result)).toBe(true);
+    }
+  });
+
+  it('keeps zero-weight density finite and rejects fractional serving counts', () => {
+    const result = calculateRecipeTotals([{ ingredient: oats, quantity: 0 }], 1.5);
+    expect(result.per100g.energy).toBe(0);
+    expect(result.isValid).toBe(false);
+    expect(result.issues.some((issue) => issue.code === 'zero_quantity')).toBe(true);
+    expect(result.issues.some((issue) => issue.code === 'invalid_servings')).toBe(true);
+    expect(allReportedNumbersAreFinite(result)).toBe(true);
   });
 
   it('rounds nutrient values to two decimal places and handles non-finite values', () => {

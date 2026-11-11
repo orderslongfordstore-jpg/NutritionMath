@@ -1,66 +1,70 @@
 # NutritionPro Outcomes
 
-## 1. Calculation correctness and regression coverage — in progress
+## 1. Calculation correctness and regression coverage — complete for the current prototype
 
-- Resolve all existing errors, including the non-finite nutrition calculation problem.
-- Validate NaN values; Infinity and negative Infinity; negative ingredient quantities; zero quantities; missing nutrient values; invalid recipe weights; invalid serving counts; extremely large numbers; and division by zero.
-- Add meaningful regression tests. Do not weaken or delete tests to obtain a pass.
-- Keep the existing working calculation implementation where possible; define visible behavior for invalid or unrepresentable inputs rather than silently returning misleading values.
+- [x] Resolve the original non-finite and overflow reporting defects without weakening existing tests.
+- [x] Validate NaN, positive/negative Infinity, negative and zero ingredient quantities, missing/invalid nutrient values, invalid serving counts, oversized values, zero recipe weight, and accumulated weight/nutrient overflow.
+- [x] Report invalid or unrepresentable inputs rather than presenting fallback values as valid nutrition results; keep returned values finite.
+- [x] Retain and extend the regression suite: 19 tests currently pass, including both existing test files.
+- [x] Suppress recipe summary totals while the draft is invalid or incomplete.
 
-## 2. Ingredient management
+## 2. Ingredient management — partial; currently browser-session-only
 
-- Create, edit and delete ingredients; support ingredient search.
-- Store and display nutrient values per 100 g, including energy in kJ, protein, fat, saturated fat, carbohydrates, sugars, sodium, fibre and other supported nutrients.
-- Support ingredient categories and allergen information.
-- Validate ingredient names, nutrient values, units and per-100-g basis; do not use fake data as a substitute for working data persistence.
+- [x] Create, edit, delete and search ingredient records in the current app session.
+- [x] Capture per-100-g energy (kJ), protein, carbohydrate, sugars, fat, saturated fat, sodium, fibre, serving size and allergen information with finite/non-negative numeric validation.
+- [x] Remove fictional preloaded ingredient records and show an honest empty state.
+- [x] Export the current in-memory ingredient list as formula-injection-hardened CSV.
+- [ ] Persist ingredients to the verified development Supabase project with database-enforced user/workspace ownership.
+- [ ] Confirm the original schema's supported categories, source/provenance fields and any additional nutrient fields before extending the form.
 
-## 3. Recipe builder and batch calculations
+## 3. Recipe builder and batch calculations — partial; currently a local draft
 
-- Create and edit recipes; add multiple ingredients; enter ingredient quantities in grams.
-- Calculate total ingredient weight and total nutrition; scale recipes and batches up or down.
-- Calculate nutrition per 100 g and per serving; set serving sizes and number of servings.
-- Account for final cooked batch weight where supplied.
-- Save recipes and batch calculations with appropriate persistence and ownership.
+- [x] Add and remove ingredient lines, enter quantities in grams, set a positive whole-number serving count, and calculate draft weight, per-serving and per-100-g values.
+- [x] Propagate ingredient edits to current draft references and remove deleted ingredients from the unsaved draft.
+- [ ] Create, name, edit and persist saved recipes and batch calculations with secure ownership.
+- [ ] Implement recipe/batch scale-up and scale-down, supplied final cooked yield, and production-batch support after reconciling the actual original workflows/schema.
 
-## 4. Australian Nutrition Information Panels
+## 4. Australian Nutrition Information Panels — not complete
 
-- Generate Australian-style Nutrition Information Panels using FSANZ requirements as the regulatory reference.
-- Display average quantity per serving and per 100 g.
-- Correctly calculate energy, protein, fat, saturated fat, carbohydrate, sugars and sodium; include fibre where appropriate.
-- Apply applicable rounding and presentation requirements.
-- Do not claim regulatory compliance without validating the implementation against the relevant requirements and product-specific facts.
+- [ ] Generate a reviewed Australian-style Nutrition Information Panel using the verified original product facts and relevant FSANZ requirements.
+- [ ] Validate row order, serving/per-100-g presentation, nutrient inclusion, energy conversion and rounding against authoritative requirements.
+- [ ] Keep unverified previews explicitly marked as internal arithmetic, not a regulatory compliance determination.
 
-## 5. Food labels and exports
+## 5. Food labels and exports — partial
 
-- Generate printable food labels containing product name, serving size, nutrition panel, ingredients declarations, allergen declarations and batch information; support PDF export.
-- Provide PDF reports, Excel spreadsheets, ingredient reports, recipe reports, nutrition panels, saved recipes and batch calculations.
-- Preserve explicit units, source data and review status. Harden exports against malformed CSV fields and spreadsheet formula injection.
+- [x] Use an honest empty label state when no validated label exists.
+- [x] Harden CSV cell escaping against spreadsheet formula injection.
+- [ ] Build printable labels from reviewed product/ingredient/allergen/yield data; add batch information and approved PDF export.
+- [ ] Provide real `.xlsx` workbooks and PDF reports for ingredients, recipes, panels and saved batches; CSV alone does not satisfy Excel-workbook delivery.
+- [ ] Preserve units, source data, calculation review state and export provenance.
 
-## 6. Supabase authentication, persistence and database security
+## 6. Supabase authentication, persistence and database security — not complete
 
-- Implement registration, login, logout, password reset and secure persistent session handling.
-- Support user-specific ingredients and recipes, database persistence, appropriate validation and error handling, and database-enforced Row Level Security.
-- Add reviewed database migrations. Inspect and document the actual schema; do not invent an existing schema.
-- Do not expose service-role keys or secrets in frontend code.
-- Do not modify the existing production Supabase project or its data. Use a separate development/staging configuration until the new application has been tested and approved. The accessible `NutrientsMath` project remains an unconfirmed candidate; no writes or account creation there until its staging status is confirmed.
+- [ ] Implement native Supabase registration, login, logout, password reset and persistent sessions without Manus auth.
+- [ ] Connect authenticated users to persisted ingredients, recipes, panels and batches using existing compatible schema or reviewed additive migrations.
+- [ ] Validate user/workspace ownership with RLS and explicit negative cross-user access tests.
+- [ ] Do not expose service-role keys or other secrets in frontend code.
+- [ ] Do not change the existing production Supabase project or its data. The accessible `NutrientsMath` project has matching empty NutritionPro tables and deny-all RLS, but it remains an unconfirmed development/staging candidate; no writes, account creation or migrations there until its role is confirmed.
 
-## 7. Interface and mobile experience
+## 7. Interface and mobile experience — foundation complete; full product not complete
 
-- The finished product must be called NutritionPro.
-- Use black, white and yellow branding; provide a clean professional layout, mobile-first design, iPhone-friendly controls, responsive desktop layout and simple navigation.
-- Provide easy-to-use ingredient and recipe screens and clear nutrition calculations.
-- Avoid a generic dashboard that looks finished but has no working functionality. Every major button and feature must actually work. Do not use fake data as a substitute or leave unfinished placeholder buttons.
+- [x] Keep the product name NutritionPro and apply the requested black, white and yellow identity with responsive navigation and clear empty/review states.
+- [x] Smoke-test the local app at 390×844: dashboard, ingredient CRUD/search, recipe calculation and deletion all fit without page-level horizontal overflow.
+- [ ] Complete the missing authenticated/persistent product workflows, preserving the original screen behavior where it is available.
+- [ ] Verify additional iPhone/tablet/desktop breakpoints and accessibility with final, data-backed screens.
 
-## 8. Quality assurance and deployment preparation
+## 8. Quality assurance and deployment preparation — local checks pass; remote/database checks pending
 
-- Complete and repeat the relevant validation: `npm ci`, TypeScript checks, all unit tests, nutrition calculation tests, application build, database migration validation, authentication checks, security checks, and mobile/desktop interface checks.
-- GitHub Actions must finish successfully. Report the actual workflow URL and commit SHA. Do not claim a test passed unless it was executed and passed.
-- Prepare deployment instructions with the correct build command, start command, environment-variable documentation, Supabase setup and migration instructions, and health-check endpoint if required.
-- Do not deploy over the existing production NutritionPro website and do not change production environment variables or data.
+- [x] Install the committed dependencies with `npm ci` during baseline verification.
+- [x] Run `npx tsc -b --pretty false`, all 19 tests, and `npm run build` after the current stage-two changes; all exited successfully.
+- [x] Run `git diff --check` and an actual Chromium 390×844 mobile smoke test against localhost.
+- [ ] Verify GitHub Actions on each pushed development commit and record the run URL/result.
+- [ ] Validate database migrations, live Supabase Auth flows, RLS boundaries, exports and server logs in the confirmed non-production environment.
+- [ ] Document the correct staging/production environment variables and deployment commands; do not change production configuration or deploy without approval.
 
-## 9. Branch, commit and final delivery
+## 9. Branch, commit and final delivery — in progress
 
-- Work only on `development/nutritionpro-foundation`; never push development work to `main`.
-- Commit completed changes to GitHub on that development branch and verify each stage before continuing.
-- Do not delete useful existing functionality, fabricate test results, or claim completion while required features remain missing.
-- Keep a clear record of changes and provide a final report covering inspection, errors found/fixed, completed and incomplete features, latest commit SHA, actual GitHub Actions URL/result, production-build status, whether Supabase staging works, deployment readiness and any remaining approval items.
+- [x] Work on `development/nutritionpro-foundation`; do not push development work to `main`.
+- [x] Stage one is committed and pushed to the development branch; stage two is validated locally and awaiting its branch commit/push.
+- [ ] Commit each remaining verified stage and confirm the remote branch SHA and GitHub Actions result.
+- [ ] Final report must distinguish verified implementation from incomplete work and cover source/schema findings, files changed, tests, commit SHA, Actions result, staging status, deployment readiness and remaining approval items.

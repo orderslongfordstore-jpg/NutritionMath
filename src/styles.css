@@ -133,6 +133,7 @@ input:hover, select:hover { border-color: #8b8b80; }
 }
 .primary-button { border: 1px solid var(--ink); background: var(--ink); color: #fff; }
 .primary-button:hover { background: #343434; }
+.primary-button:disabled, .secondary-button:disabled { opacity: 0.5; cursor: not-allowed; }
 .secondary-button { border: 1px solid var(--ink); background: #fff; color: var(--ink); }
 .secondary-button:hover { background: var(--yellow); }
 .primary-button:active, .secondary-button:active { transform: translateY(1px); }
@@ -142,6 +143,7 @@ input:hover, select:hover { border-color: #8b8b80; }
 .ingredient-row strong, .recipe-line strong { display: block; font-size: 13px; }
 .ingredient-row small, .recipe-line small { display: block; margin-top: 5px; color: var(--muted); font-size: 11px; line-height: 1.4; }
 .ingredient-metrics { display: grid; gap: 4px; flex: 0 0 auto; color: #45453f; font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; }
+.ingredient-row-actions { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
 .recipe-builder-layout { grid-template-columns: minmax(240px, 0.85fr) minmax(280px, 1.15fr); }
 .recipe-panel { align-content: start; }
 .recipe-summary-panel { display: grid; gap: 0; background: var(--ink); color: #fff; }
@@ -153,6 +155,15 @@ input:hover, select:hover { border-color: #8b8b80; }
 .recipe-line-controls { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
 .recipe-line-controls input { width: 94px; min-height: 40px; }
 .recipe-line-controls span { min-width: 64px; color: #45453f; font-family: 'DM Mono', ui-monospace, monospace; font-size: 11px; text-align: right; }
+.calculation-warning { margin-top: 16px; padding: 14px 16px; border: 1px solid #d8b900; border-left: 5px solid var(--yellow-deep); border-radius: 10px; background: #fffbe1; color: #332b00; font-size: 12px; line-height: 1.55; }
+.calculation-warning strong { display: block; margin-bottom: 6px; }
+.calculation-warning ul { display: grid; gap: 3px; margin: 0; padding-left: 18px; }
+.field-error { margin: 0; color: var(--danger); font-size: 12px; font-weight: 700; line-height: 1.5; }
+.form-message { margin: 0; padding: 9px 11px; border-radius: 8px; background: #eef6ef; color: #195737; font-size: 12px; line-height: 1.5; }
+.empty-state { margin: 0; padding: 18px; border: 1px dashed #b8b8ae; border-radius: 10px; color: var(--muted); font-size: 13px; line-height: 1.5; text-align: center; }
+.text-button { min-height: 40px; padding: 0 8px; border: 0; border-radius: 7px; background: transparent; color: #7b2020; font-size: 12px; font-weight: 800; cursor: pointer; }
+.text-button:hover { background: #f8eaea; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
 .nutrition-panel-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
 .nutrition-panel-grid > div { display: grid; gap: 7px; min-height: 76px; padding: 14px; border: 1px solid var(--line); border-radius: 11px; background: #fbfbf8; }
@@ -181,6 +192,8 @@ input:hover, select:hover { border-color: #8b8b80; }
   .content-shell { padding: 22px 13px 48px; }
   .top-banner { align-items: flex-start; flex-direction: column; gap: 12px; margin-bottom: 18px; }
   .status-chip { max-width: 100%; border-radius: 10px; }
+  .tab-nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; overflow: visible; }
+  .nav-link { min-width: 0; padding: 0 6px; font-size: 11px; }
   .overview-grid { gap: 8px; }
   .metric-card { min-height: 100px; padding: 14px; border-radius: 13px; }
   .metric-card span { margin-bottom: 11px; font-size: 10px; }
@@ -193,8 +206,8 @@ input:hover, select:hover { border-color: #8b8b80; }
   .recipe-builder-layout { grid-template-columns: 1fr; }
   .ingredient-row, .recipe-line { align-items: flex-start; flex-direction: column; }
   .ingredient-metrics { grid-template-columns: repeat(2, max-content); text-align: left; }
-  .recipe-line-controls { width: 100%; justify-content: space-between; }
-  .recipe-line-controls input { flex: 1; width: auto; }
+  .recipe-line-controls { width: 100%; min-width: 0; flex-wrap: wrap; justify-content: flex-start; gap: 8px; }
+  .recipe-line-controls input { flex: 1 1 88px; width: auto; min-width: 0; }
   .action-row > button { flex: 1 1 140px; }
   .label-preview { padding: 17px; box-shadow: 5px 5px 0 var(--yellow); }
 }

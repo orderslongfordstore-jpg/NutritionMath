@@ -5,41 +5,73 @@ import { OverviewCards } from './components/OverviewCards';
 import { RecipeBuilder } from './components/RecipeBuilder';
 import { SectionCard } from './components/SectionCard';
 import { Topbar } from './components/Topbar';
-import { defaultIngredients } from './lib/mockData';
 import { calculateNipPanel, calculateRecipeTotals, roundToTwo } from './lib/nutrition';
 import type { Ingredient, RecipeIngredient } from './types';
 
-const defaultRecipeIngredients: RecipeIngredient[] = [
-  { ingredient: defaultIngredients[0], quantity: 150 },
-  { ingredient: defaultIngredients[1], quantity: 80 },
-];
+type Tab = 'dashboard' | 'ingredients' | 'recipes' | 'accounts' | 'labels';
+
+function csvCell(value: string | number): string {
+  const raw = String(value);
+  const safe = /^[\s\u0000-\u001f]*[=+\-@]/.test(raw) ? `'${raw}` : raw;
+  return `"${safe.replace(/"/g, '""')}"`;
+}
 
 function App() {
-  const [ingredients, setIngredients] = useState<Ingredient[]>(defaultIngredients);
-  const [recipeIngredients, setRecipeIngredients] = useState<RecipeIngredient[]>(defaultRecipeIngredients);
-  const [selectedTab, setSelectedTab] = useState<'dashboard' | 'ingredients' | 'recipes' | 'accounts' | 'labels'>('dashboard');
-  const [statusMessage, setStatusMessage] = useState('Ready for local validation.');
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [recipeIngredients, setRecipeIngredients] = useState<RecipeIngredient[]>([]);
+  const [servings, setServings] = useState('2');
+  const [selectedTab, setSelectedTab] = useState<Tab>('dashboard');
+  const [statusMessage, setStatusMessage] = useState('No saved records are connected. Changes are kept only for this browser session.');
 
-  const recipeSummary = useMemo(() => calculateRecipeTotals(recipeIngredients, 2), [recipeIngredients]);
+  const recipeSummary = useMemo(
+    () => calculateRecipeTotals(recipeIngredients, Number(servings)),
+    [recipeIngredients, servings],
+  );
   const panelPreview = useMemo(() => calculateNipPanel(recipeSummary.per100g), [recipeSummary]);
 
-  const addIngredient = (ingredient: Ingredient) => {
-    setIngredients((current) => [ingredient, ...current]);
-    setStatusMessage(`Ingredient added: ${ingredient.name}`);
+  const saveIngredient = (ingredient: Ingredient) => {
+    setIngredients((current) => {
+      const exists = current.some((entry) => entry.id === ingredient.id);
+      return exists
+        ? current.map((entry) => entry.id === ingredient.id ? ingredient : entry)
+        : [ingredient, ...current];
+    });
+    setRecipeIngredients((current) => current.map((entry) => (
+      entry.ingredient.id === ingredient.id ? { ...entry, ingredient } : entry
+    )));
+    setStatusMessage(`Ingredient “${ingredient.name}” is saved in this session only; it is not persisted yet.`);
+  };
+
+  const deleteIngredient = (ingredientId: string) => {
+    const deleted = ingredients.find((ingredient) => ingredient.id === ingredientId);
+    setIngredients((current) => current.filter((ingredient) => ingredient.id !== ingredientId));
+    setRecipeIngredients((current) => current.filter((entry) => entry.ingredient.id !== ingredientId));
+    setStatusMessage(deleted
+      ? `Ingredient “${deleted.name}” was removed from this session and any unsaved recipe draft.`
+      : 'Ingredient was not found.');
   };
 
   const addRecipeItem = (ingredient: Ingredient, quantity: number) => {
-    if (quantity <= 0) {
-      setStatusMessage('Ingredient quantity must be greater than zero.');
+    if (!Number.isFinite(quantity) || quantity <= 0 || quantity > Number.MAX_SAFE_INTEGER) {
+      setStatusMessage('Ingredient quantity must be finite and greater than zero.');
       return;
     }
 
     setRecipeIngredients((current) => [...current, { ingredient, quantity }]);
-    setStatusMessage(`Added ${ingredient.name} to the recipe.`);
+    setStatusMessage(`Added ${ingredient.name} to the current recipe draft; it is not saved yet.`);
   };
 
   const handleExportCsv = () => {
-    const header = ['Ingredient', 'Energy (kJ)', 'Protein (g)', 'Carbohydrate (g)', 'Sugars (g)', 'Fat (g)', 'Sodium (mg)'];
+    if (ingredients.length === 0) {
+      setStatusMessage('There are no ingredient records to export.');
+      return;
+    }
+
+    const header = [
+      'Ingredient', 'Energy (kJ/100 g)', 'Protein (g/100 g)', 'Carbohydrate (g/100 g)',
+      'Sugars (g/100 g)', 'Fat (g/100 g)', 'Saturated fat (g/100 g)',
+      'Sodium (mg/100 g)', 'Fibre (g/100 g)', 'Serving size (g)', 'Allergens',
+    ];
     const rows = ingredients.map((ingredient) => [
       ingredient.name,
       String(roundToTwo(ingredient.energy)),
@@ -47,29 +79,43 @@ function App() {
       String(roundToTwo(ingredient.carbohydrates)),
       String(roundToTwo(ingredient.sugars)),
       String(roundToTwo(ingredient.fat)),
+      String(roundToTwo(ingredient.saturatedFat)),
       String(roundToTwo(ingredient.sodium)),
+      String(roundToTwo(ingredient.fibre)),
+      String(roundToTwo(ingredient.servingSize)),
+      ingredient.allergens.join('; '),
     ]);
-
-    const csv = [header, ...rows].map((row) => row.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const csv = [header, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n');
+    const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'nutritionpro-ingredients.csv';
-    a.click();
-    URL.revokeObjectURL(url);
-    setStatusMessage('Ingredient CSV exported locally.');
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'nutritionpro-ingredients.csv';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setStatusMessage('Ingredient CSV exported from current session data. This is not a saved database export.');
   };
 
   const renderActiveSection = () => {
     switch (selectedTab) {
       case 'ingredients':
-        return <IngredientManager ingredients={ingredients} onAddIngredient={addIngredient} onExportCsv={handleExportCsv} />;
+        return (
+          <IngredientManager
+            ingredients={ingredients}
+            onSaveIngredient={saveIngredient}
+            onDeleteIngredient={deleteIngredient}
+            onExportCsv={handleExportCsv}
+          />
+        );
       case 'recipes':
         return (
           <RecipeBuilder
             ingredients={ingredients}
             recipeIngredients={recipeIngredients}
+            servings={servings}
+            onServingsChange={setServings}
             onAddRecipeItem={addRecipeItem}
             onRecipeChange={setRecipeIngredients}
           />
@@ -78,37 +124,39 @@ function App() {
         return <AuthPanel />;
       case 'labels':
         return (
-          <SectionCard title="Food labels and declaration preview" description="Generate printable label content from validated nutrition and ingredient data.">
-            <div className="label-preview">
-              <h3>Wholemeal bread loaf</h3>
-              <p>Servings per package: 8</p>
-              <p>Average serving size: 60 g</p>
-              <ul>
-                <li>Energy: {panelPreview.energyPer100g} kJ per 100 g</li>
-                <li>Protein: {panelPreview.proteinPer100g} g per 100 g</li>
-                <li>Carbohydrate: {panelPreview.carbohydratePer100g} g per 100 g</li>
-                <li>Sodium: {panelPreview.sodiumPer100g} mg per 100 g</li>
-              </ul>
-              <p>Ingredients: Wholemeal flour, yeast, water, salt, sesame seeds.</p>
-              <p>Contains: Wheat, sesame seeds.</p>
-            </div>
+          <SectionCard title="Food label workflow" description="Nutrition calculations are not yet validated for label use or regulatory compliance.">
+            <p className="empty-state">
+              No label has been generated. Product identity, reviewed ingredient and allergen declarations, final yield, and label validation are required before printable output is available.
+            </p>
           </SectionCard>
         );
       default:
         return (
           <>
             <OverviewCards recipeSummary={recipeSummary} />
-            <SectionCard title="Nutrition panel preview" description="FSANZ-style summary for verified recipe calculations.">
-              <div className="nutrition-panel-grid">
-                <div><span>Energy</span><strong>{panelPreview.energyPer100g} kJ/100 g</strong></div>
-                <div><span>Protein</span><strong>{panelPreview.proteinPer100g} g</strong></div>
-                <div><span>Carbohydrate</span><strong>{panelPreview.carbohydratePer100g} g</strong></div>
-                <div><span>Sugars</span><strong>{panelPreview.sugarPer100g} g</strong></div>
-                <div><span>Fat</span><strong>{panelPreview.fatPer100g} g</strong></div>
-                <div><span>Saturated fat</span><strong>{panelPreview.saturatedFatPer100g} g</strong></div>
-                <div><span>Sodium</span><strong>{panelPreview.sodiumPer100g} mg</strong></div>
-                <div><span>Fibre</span><strong>{panelPreview.fibrePer100g} g</strong></div>
-              </div>
+            <SectionCard
+              title="Nutrition calculation preview"
+              description="Internal arithmetic only. This preview is not an Australian Nutrition Information Panel or a compliance determination."
+            >
+              {recipeSummary.isValid && recipeIngredients.length > 0 ? (
+                <div className="nutrition-panel-grid">
+                  <div><span>Energy</span><strong>{panelPreview.energyPer100g} kJ/100 g</strong></div>
+                  <div><span>Protein</span><strong>{panelPreview.proteinPer100g} g/100 g</strong></div>
+                  <div><span>Carbohydrate</span><strong>{panelPreview.carbohydratePer100g} g/100 g</strong></div>
+                  <div><span>Sugars</span><strong>{panelPreview.sugarPer100g} g/100 g</strong></div>
+                  <div><span>Fat</span><strong>{panelPreview.fatPer100g} g/100 g</strong></div>
+                  <div><span>Saturated fat</span><strong>{panelPreview.saturatedFatPer100g} g/100 g</strong></div>
+                  <div><span>Sodium</span><strong>{panelPreview.sodiumPer100g} mg/100 g</strong></div>
+                  <div><span>Fibre</span><strong>{panelPreview.fibrePer100g} g/100 g</strong></div>
+                </div>
+              ) : (
+                <div className="calculation-warning" role="status" aria-live="polite">
+                  <strong>No nutrition panel values are ready to use.</strong>
+                  <ul>
+                    {recipeSummary.issues.map((issue, index) => <li key={`${issue.code}-${index}`}>{issue.message}</li>)}
+                  </ul>
+                </div>
+              )}
             </SectionCard>
           </>
         );
@@ -121,10 +169,10 @@ function App() {
       <main className="content-shell">
         <div className="top-banner">
           <div>
-            <p className="eyebrow">Australian food business platform</p>
+            <p className="eyebrow">Australian food business tools</p>
             <h1>NutritionPro</h1>
           </div>
-          <div className="status-chip">{statusMessage}</div>
+          <div className="status-chip" role="status" aria-live="polite">{statusMessage}</div>
         </div>
         {renderActiveSection()}
       </main>

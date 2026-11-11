@@ -21,6 +21,14 @@ export interface RecipeIngredient {
   quantity: number;
 }
 
+export interface NutritionCalculationIssue {
+  code: string;
+  severity: 'error' | 'warning';
+  message: string;
+  itemIndex?: number;
+  nutrient?: string;
+}
+
 export interface NutritionSummary {
   totalWeight: number;
   totalEnergy: number;
@@ -51,4 +59,6 @@ export interface NutritionSummary {
     sodium: number;
     fibre: number;
   };
+  isValid: boolean;
+  issues: NutritionCalculationIssue[];
 }
