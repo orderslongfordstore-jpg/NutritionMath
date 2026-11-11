@@ -59,6 +59,7 @@
 - [x] Run `npx tsc -b --pretty false`, all 19 tests, and `npm run build` after the current stage-two changes; all exited successfully.
 - [x] Run `git diff --check` and an actual Chromium 390×844 mobile smoke test against localhost.
 - [x] GitHub Actions `NutritionPro CI` passed for stage-two SHA `edd53625a7f4b60b10caabb41c88523e106d8a95`: https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/43111435208. Continue verifying each later push.
+- [x] GitHub Actions passed for report SHA `031e2ba67398194dfb5bc42e9573784a79e05a5c`: https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/43112414968.
 - [ ] Validate database migrations, live Supabase Auth flows, RLS boundaries, exports and server logs in the confirmed non-production environment.
 - [ ] Document the correct staging/production environment variables and deployment commands; do not change production configuration or deploy without approval.
 
@@ -67,4 +68,4 @@
 - [x] Work on `development/nutritionpro-foundation`; do not push development work to `main`.
 - [x] Stage one and stage two are committed and pushed to the development branch; latest stage-two commit is `edd53625a7f4b60b10caabb41c88523e106d8a95`.
 - [ ] Commit each remaining verified stage and confirm the remote branch SHA and GitHub Actions result.
-- [ ] Final report must distinguish verified implementation from incomplete work and cover source/schema findings, files changed, tests, commit SHA, Actions result, staging status, deployment readiness and remaining approval items.
+- [x] The [feature-preservation and integration report](FEATURE_PRESERVATION_AND_INTEGRATION_REPORT.md) distinguishes verified work, source/schema limits, tests, deployment status and approvals still needed.
