@@ -1,13 +1,16 @@
 import { useMemo, useState } from 'react';
 import { AuthPanel } from './components/AuthPanel';
+import { BatchManager } from './components/BatchManager';
 import { IngredientManager } from './components/IngredientManager';
+import { createEmptyFoodLabelDraft, LabelBuilder } from './components/LabelBuilder';
 import { OverviewCards } from './components/OverviewCards';
 import { RecipeBuilder } from './components/RecipeBuilder';
 import { SectionCard } from './components/SectionCard';
 import { Topbar } from './components/Topbar';
-import { calculateNipPanel, calculateRecipeTotals, roundToTwo } from './lib/nutrition';
+import { calculateRecipeTotals, roundToTwo } from './lib/nutrition';
 import { downloadIngredientsXlsx, downloadRecipePdf, downloadRecipeXlsx } from './lib/exports';
-import type { Ingredient, RecipeIngredient } from './types';
+import { SessionNutritionRepository } from './lib/nutritionRepository';
+import type { Ingredient, RecipeIngredient, RecipeVersion, SavedRecipe, BatchRecord } from './types';
 import { useAuth } from './context/AuthContext';
 
 type Tab = 'dashboard' | 'ingredients' | 'recipes' | 'accounts' | 'labels';
@@ -21,17 +24,24 @@ function csvCell(value: string | number): string {
 function App() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [recipeIngredients, setRecipeIngredients] = useState<RecipeIngredient[]>([]);
+  const [repository] = useState(() => new SessionNutritionRepository());
+  const [savedRecipes, setSavedRecipes] = useState<SavedRecipe[]>([]);
+  const [batches, setBatches] = useState<BatchRecord[]>([]);
+  const [labelDraft, setLabelDraft] = useState(createEmptyFoodLabelDraft);
+  const [recipeName, setRecipeName] = useState('');
+  const [currentRecipeId, setCurrentRecipeId] = useState<string | null>(null);
+  const [currentRecipeVersion, setCurrentRecipeVersion] = useState<number | null>(null);
   const [servings, setServings] = useState('2');
   const [selectedTab, setSelectedTab] = useState<Tab>('dashboard');
+  const [localOnlyAccess, setLocalOnlyAccess] = useState(false);
   const [statusMessage, setStatusMessage] = useState('No saved records are connected. Changes are kept only for this browser session.');
   const [isExporting, setIsExporting] = useState(false);
-  const { loading: authLoading, user } = useAuth();
+  const { configured, loading: authLoading, user } = useAuth();
 
   const recipeSummary = useMemo(
     () => calculateRecipeTotals(recipeIngredients, Number(servings)),
     [recipeIngredients, servings],
   );
-  const panelPreview = useMemo(() => calculateNipPanel(recipeSummary.per100g), [recipeSummary]);
 
   const saveIngredient = (ingredient: Ingredient) => {
     setIngredients((current) => {
@@ -63,6 +73,43 @@ function App() {
 
     setRecipeIngredients((current) => [...current, { ingredient, quantity }]);
     setStatusMessage(`Added ${ingredient.name} to the current recipe draft; it is not saved yet.`);
+  };
+
+  const handleSaveRecipeVersion = async () => {
+    const matchingRecipe = savedRecipes.find((recipe) => recipe.id === currentRecipeId && recipe.name === recipeName.trim());
+    try {
+      const version = await repository.saveRecipeVersion({
+        name: recipeName,
+        ingredients: recipeIngredients,
+        servings: Number(servings),
+        recipeId: matchingRecipe?.id,
+      });
+      const nextRecipes = await repository.listRecipes();
+      setSavedRecipes(nextRecipes);
+      setCurrentRecipeId(version.recipeId);
+      setCurrentRecipeVersion(version.version);
+      setStatusMessage(`Saved “${version.name}” version ${version.version} in this page session only.`);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : 'The recipe version could not be saved in this page session.');
+    }
+  };
+
+  const handleLoadRecipeVersion = (version: RecipeVersion) => {
+    setRecipeName(version.name);
+    setCurrentRecipeId(version.recipeId);
+    setCurrentRecipeVersion(version.version);
+    setRecipeIngredients(version.ingredients.map((entry) => ({
+      ...entry,
+      ingredient: { ...entry.ingredient, allergens: [...entry.ingredient.allergens] },
+    })));
+    setServings(String(version.servings));
+    setStatusMessage(`Loaded “${version.name}” version ${version.version} from this page session.`);
+  };
+
+  const handleSaveBatch = async (input: Parameters<SessionNutritionRepository['createBatch']>[0]) => {
+    const record = await repository.createBatch(input);
+    setBatches(await repository.listBatches());
+    setStatusMessage(`Batch ${record.batchCode} saved for “${record.recipeName}” version ${record.recipeVersion} in this page session only.`);
   };
 
   const handleExportCsv = () => {
@@ -162,14 +209,30 @@ function App() {
         </SectionCard>
       );
     }
-    if (requiresAuth && !user) {
+    if (requiresAuth && !user && !(localOnlyAccess && !configured)) {
       return (
         <SectionCard title="Sign in required" description="Ingredient, recipe and label workspaces are protected behind Supabase Auth.">
           <div className="auth-gate">
-            <p role="status">Sign in to access private NutritionPro workspaces. No saved database records are available in this disconnected development build.</p>
-            <button type="button" className="primary-button" onClick={() => setSelectedTab('accounts')}>
-              Open account access
-            </button>
+            {!configured ? (
+              <>
+                <p role="status">Supabase is not configured. You can open an isolated, session-only local workspace for development. No sign-in, database connection or durable save is provided. The workspace is cleared when this page is reloaded.</p>
+                <div className="action-row">
+                  <button type="button" className="primary-button" onClick={() => setLocalOnlyAccess(true)}>
+                    Continue in local-only mode
+                  </button>
+                  <button type="button" className="secondary-button" onClick={() => setSelectedTab('accounts')}>
+                    Open account access
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p role="status">Sign in to access private NutritionPro workspaces. No saved database records are available in this development build.</p>
+                <button type="button" className="primary-button" onClick={() => setSelectedTab('accounts')}>
+                  Open account access
+                </button>
+              </>
+            )}
           </div>
         </SectionCard>
       );
@@ -189,27 +252,41 @@ function App() {
         );
       case 'recipes':
         return (
-          <RecipeBuilder
-            ingredients={ingredients}
-            recipeIngredients={recipeIngredients}
-            servings={servings}
-            onServingsChange={setServings}
-            onAddRecipeItem={addRecipeItem}
-            onRecipeChange={setRecipeIngredients}
-            onExportXlsx={handleExportRecipeXlsx}
-            onExportPdf={handleExportRecipePdf}
-            exporting={isExporting}
-          />
+          <>
+            <RecipeBuilder
+              ingredients={ingredients}
+              recipeIngredients={recipeIngredients}
+              servings={servings}
+              onServingsChange={setServings}
+              onAddRecipeItem={addRecipeItem}
+              onRecipeChange={setRecipeIngredients}
+              onExportXlsx={handleExportRecipeXlsx}
+              onExportPdf={handleExportRecipePdf}
+              exporting={isExporting}
+              recipeName={recipeName}
+              currentRecipeId={currentRecipeId}
+              currentRecipeVersion={currentRecipeVersion}
+              savedRecipes={savedRecipes}
+              onRecipeNameChange={setRecipeName}
+              onSaveRecipeVersion={handleSaveRecipeVersion}
+              onLoadRecipeVersion={handleLoadRecipeVersion}
+            />
+            <BatchManager ingredients={ingredients} recipes={savedRecipes} batches={batches} onSaveBatch={handleSaveBatch} />
+          </>
         );
       case 'accounts':
         return <AuthPanel />;
       case 'labels':
         return (
-          <SectionCard title="Food label workflow" description="Nutrition calculations are not yet validated for label use or regulatory compliance.">
-            <p className="empty-state">
-              No label has been generated. Product identity, reviewed ingredient and allergen declarations, final yield, and label validation are required before printable output is available.
-            </p>
-          </SectionCard>
+          <LabelBuilder
+            batches={batches}
+            draft={labelDraft}
+            onDraftChange={setLabelDraft}
+            onPrintDraft={() => {
+              setStatusMessage('Printing a session-only label draft for review. It is not approved for commercial use.');
+              window.print();
+            }}
+          />
         );
       default:
         return (
@@ -221,14 +298,14 @@ function App() {
             >
               {recipeSummary.isValid && recipeIngredients.length > 0 ? (
                 <div className="nutrition-panel-grid">
-                  <div><span>Energy</span><strong>{panelPreview.energyPer100g} kJ/100 g</strong></div>
-                  <div><span>Protein</span><strong>{panelPreview.proteinPer100g} g/100 g</strong></div>
-                  <div><span>Carbohydrate</span><strong>{panelPreview.carbohydratePer100g} g/100 g</strong></div>
-                  <div><span>Sugars</span><strong>{panelPreview.sugarPer100g} g/100 g</strong></div>
-                  <div><span>Fat</span><strong>{panelPreview.fatPer100g} g/100 g</strong></div>
-                  <div><span>Saturated fat</span><strong>{panelPreview.saturatedFatPer100g} g/100 g</strong></div>
-                  <div><span>Sodium</span><strong>{panelPreview.sodiumPer100g} mg/100 g</strong></div>
-                  <div><span>Fibre</span><strong>{panelPreview.fibrePer100g} g/100 g</strong></div>
+                  <div><span>Energy</span><strong>{recipeSummary.per100g.energy} kJ/100 g</strong></div>
+                  <div><span>Protein</span><strong>{recipeSummary.per100g.protein} g/100 g</strong></div>
+                  <div><span>Carbohydrate</span><strong>{recipeSummary.per100g.carbohydrates} g/100 g</strong></div>
+                  <div><span>Sugars</span><strong>{recipeSummary.per100g.sugars} g/100 g</strong></div>
+                  <div><span>Fat</span><strong>{recipeSummary.per100g.fat} g/100 g</strong></div>
+                  <div><span>Saturated fat</span><strong>{recipeSummary.per100g.saturatedFat} g/100 g</strong></div>
+                  <div><span>Sodium</span><strong>{recipeSummary.per100g.sodium} mg/100 g</strong></div>
+                  <div><span>Fibre</span><strong>{recipeSummary.per100g.fibre} g/100 g</strong></div>
                 </div>
               ) : (
                 <div className="calculation-warning" role="status" aria-live="polite">
@@ -255,6 +332,11 @@ function App() {
           </div>
           <div className="status-chip" role="status" aria-live="polite">{statusMessage}</div>
         </div>
+        {localOnlyAccess && !configured ? (
+          <p className="local-only-banner" role="status">
+            Local-only workspace — all records are kept in this page session and are not authenticated, synced or persisted. Reloading this page clears the workspace.
+          </p>
+        ) : null}
         {renderActiveSection()}
       </main>
     </div>

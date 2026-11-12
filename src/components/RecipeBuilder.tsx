@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { calculateRecipeTotals, roundToTwo } from '../lib/nutrition';
-import type { Ingredient, RecipeIngredient } from '../types';
+import type { Ingredient, RecipeIngredient, RecipeVersion, SavedRecipe } from '../types';
 import { SectionCard } from './SectionCard';
 
 type RecipeBuilderProps = {
@@ -13,6 +13,13 @@ type RecipeBuilderProps = {
   onExportXlsx: () => void;
   onExportPdf: () => void;
   exporting: boolean;
+  recipeName: string;
+  currentRecipeId: string | null;
+  currentRecipeVersion: number | null;
+  savedRecipes: SavedRecipe[];
+  onRecipeNameChange: (value: string) => void;
+  onSaveRecipeVersion: () => void;
+  onLoadRecipeVersion: (version: RecipeVersion) => void;
 };
 
 export function RecipeBuilder({
@@ -25,9 +32,17 @@ export function RecipeBuilder({
   onExportXlsx,
   onExportPdf,
   exporting,
+  recipeName,
+  currentRecipeId,
+  currentRecipeVersion,
+  savedRecipes,
+  onRecipeNameChange,
+  onSaveRecipeVersion,
+  onLoadRecipeVersion,
 }: RecipeBuilderProps) {
   const [selectedIngredientId, setSelectedIngredientId] = useState(ingredients[0]?.id ?? '');
   const [quantity, setQuantity] = useState('100');
+  const [savedVersionId, setSavedVersionId] = useState('');
   const [formError, setFormError] = useState('');
   const selectedId = ingredients.some((ingredient) => ingredient.id === selectedIngredientId)
     ? selectedIngredientId
@@ -74,9 +89,45 @@ export function RecipeBuilder({
   };
 
   return (
-    <SectionCard title="Recipe calculator" description="Build a recipe and review its calculated nutrient totals. Cooked-yield and production-batch support are not yet available.">
+    <SectionCard title="Recipe calculator" description="Build a recipe, save session-only versions, and calculate batches from a specific version using measured cooked yield.">
       <div className="recipe-builder-layout">
         <div className="panel-form recipe-panel">
+          <label>
+            Recipe name
+            <input value={recipeName} maxLength={120} onChange={(event) => onRecipeNameChange(event.target.value)} placeholder="e.g. Chicken and rice meal" />
+          </label>
+          {currentRecipeId && currentRecipeVersion ? (
+            <p className="form-message">Editing {recipeName}, based on saved version {currentRecipeVersion}. Saving creates a new version; earlier versions remain available in this session.</p>
+          ) : null}
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={onSaveRecipeVersion}
+            disabled={!recipeName.trim() || !hasUsableTotals}
+          >
+            {currentRecipeId ? 'Save as next recipe version' : 'Save named recipe version'}
+          </button>
+          <label>
+            Load saved recipe version
+            <select
+              value={savedVersionId}
+              onChange={(event) => {
+                setSavedVersionId(event.target.value);
+                const version = savedRecipes.flatMap((recipe) => recipe.versions).find((entry) => entry.id === event.target.value);
+                if (version) onLoadRecipeVersion(version);
+              }}
+            >
+              <option value="">Choose a saved version</option>
+              {savedRecipes.map((recipe) => (
+                <optgroup key={recipe.id} label={recipe.name}>
+                  {recipe.versions.map((version) => (
+                    <option key={version.id} value={version.id}>Version {version.version} · {version.createdAt.slice(0, 10)}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </label>
+          <p className="calculation-note">Recipe versions are held in memory only and disappear when this page session ends. Batch records link to the exact version used.</p>
           <label>
             Ingredient
             <select value={selectedId} onChange={(event) => setSelectedIngredientId(event.target.value)}>

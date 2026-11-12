@@ -1,83 +1,78 @@
 # NutritionPro Feature-Preservation and Integration Report
 
-**Updated:** 12 November 2026
+**Updated:** 13 November 2026
 **Development branch:** `development/nutritionpro-foundation`
-**Application-code milestone:** `aaa1bccbae41438e86edbdd620530038e5525cda`
-**Scope:** Continue the NutritionPro development foundation without changing the live Render service or any Supabase project.
+**Baseline commit:** `c8a65be47a1a0f2b3c13bba289c7e7ea252f6325`
+**Current milestone:** local checks passed; commit and GitHub Actions result pending
+**Scope:** Work only on the authorized development branch. No production Render service or Supabase project was contacted or changed.
 
-## Executive summary
+## Current result
 
-The accessible branch now has a guarded native Supabase Auth client foundation, session-local ingredient CRUD and recipe calculations, and genuine browser-generated XLSX/PDF exports for supported draft data. It remains a prototype: there is no approved or configured staging Supabase project, no remote registration/login test, no database persistence or RLS integration, no validated FSANZ Nutrition Information Panel (NIP), and no production deployment.
+The development foundation now contains native Supabase Auth client flows; session-only ingredient management; named recipe versions and exact-version batch records; measured cooked-yield calculations; an FSANZ-informed draft NIP; a printable, batch-linked label draft; and existing CSV/XLSX/PDF draft exports. A separate local-only workspace is available by explicit choice when no Supabase client is configured. If a public Supabase client is configured, protected workspaces continue to require an authenticated user.
 
-The application code and its dependency manifest contain no Manus OAuth provider, Manus callback route, or Manus authentication dependency. That finding is limited to this accessible development source. The live Render application and its existing settings were not changed, and their current authentication behavior has not been reverified in this development stage.
+The NIP and label features remain calculation and review drafts, not an approval of compliance. No separate staging Supabase project is approved. Real Auth, database persistence, RLS and the production app were not tested in this milestone.
 
-The XLSX and PDF outputs are limited to ingredient data and an internal recipe-calculation worksheet. They are explicitly not compliant consumer labels or validated NIPs. Existing arithmetic in `src/lib/nutrition.ts` was reused unchanged for these exports.
+## Source identity and safety boundaries
 
-## Source identity and access limits
+The user-designated development source is `orderslongfordstore-jpg/NutritionMath`, branch `development/nutritionpro-foundation`. The user confirmed it is a new development foundation, not verified original production source. The formerly supplied `orderslongfordstore-jpg/nutritionPro` source URL was inaccessible through the available GitHub access; the live Render application has not been proven to match this branch.
 
-The user-designated development source is `orderslongfordstore-jpg/NutritionMath`, branch `development/nutritionpro-foundation`. The user confirmed that this is the authorized development foundation, not verified original production source code. The supplied `orderslongfordstore-jpg/nutritionPro` URL previously returned 404 through the connected GitHub access. Historical inspection found the Render-linked repository's `main` snapshot did not contain the app source present on this development branch. Therefore, the development source cannot be certified as identical to the code serving the live URL `https://nutritionpro.onrender.com`.
+The production Supabase project `nfzsjmzpiweeqtkypcgn` remains untouched and inaccessible to the development session. The user explicitly rejected `NutrientsMath` project `ndvjrsegapfhnhrjypck`; it was not contacted in this milestone. No replacement or staging database was created or connected. No Render environment settings, production records, `main` branch or live deployment were changed. No service-role key is used or included in the frontend.
 
-The supplied production Supabase project `nfzsjmzpiweeqtkypcgn` was not accessible to the connected Supabase tools in the prior audit. Its schema, users, records, Auth configuration and RLS policies therefore remain unverified. The separate `NutrientsMath` project `ndvjrsegapfhnhrjypck` was explicitly rejected for NutritionPro staging. Historical read-only inspection recorded tables and deny-all policies there, but it is not authorized and was not contacted or modified in this development continuation. No staging project is approved.
+## Implemented development features
 
-No Render environment settings, production database records, GitHub `main` branch or live deployment were modified. No production deployment was attempted.
+### Auth and local access
 
-## Current feature status
+The Vite client supports Supabase email/password sign-in and sign-up, PKCE session restoration, sign-out, password recovery and password update. Forms remain disabled when Supabase is not configured. In that no-client case only, users may explicitly enter a session-only local workspace. Its persistent on-screen warning states that work is unauthenticated, not synced or durable, and is cleared on page reload. When a valid public Supabase client is configured, ingredient, recipe and label workspaces remain gated on authentication. Auth flows remain mock-tested only.
 
-| Area | Current development-branch state | Still incomplete / not verified |
-|---|---|---|
-| Manus authentication | No Manus auth provider, callback route or SDK/dependency is present in application source or its package manifest. | This does not alter or prove the configuration of the live Render service, which remains untouched. |
-| Supabase Auth | Client flows exist for email/password sign-in, registration, session restoration, sign-out, password recovery and password update. PKCE is configured; protected workspaces fail closed when public Supabase configuration is absent. | Uses `@supabase/supabase-js` browser storage (`persistSession`), not `@supabase/ssr` or an HttpOnly cookie session. Forms are disabled with blank config. All Auth tests are mocked; real Auth is unverified. |
-| Ingredient management | Session-local create/edit/delete/search with per-100-g nutrient validation and allergen text. CSV export remains formula-injection hardened; XLSX ingredient export is available. | No database persistence, categories or verified source/provenance model. No import workflow or ingredient PDF export. |
-| Recipes and calculation | Current draft supports ingredient lines, gram quantities, servings, totals per serving/per 100 g and invalid-input warnings. | Recipes are not named, saved or restored. No production batch records, scale-up/down, cooked-yield adjustment, lot traceability or persistence. |
-| XLSX/PDF exports | Client-generated `.xlsx` ingredient workbook, recipe calculation workbook, and recipe calculation PDF. The workbook/PDF carry a non-regulatory disclaimer and use the existing calculation engine. | No workbook/report export for NIPs, batches or labels; no consumer-label PDF. These outputs do not establish regulatory compliance. |
-| Australian NIP / labels | Internal arithmetic preview and an honest empty label state; calculations are not described as a compliant NIP. | No formal FSANZ display rounding/formatting, product/yield validation, verified ingredient/allergen declaration or reviewed printable label. |
-| UI and mobile | Responsive black/white/yellow styling and protected workspaces are present. Historical smoke test at 390×844 covered earlier dashboard, ingredient and recipe paths. | The 390×844 smoke test was not repeated after adding export controls. Final authenticated/data-backed breakpoints and accessibility are not yet verified. |
+The browser SPA uses `@supabase/supabase-js` browser session persistence; it does not implement `@supabase/ssr` or an HttpOnly cookie session. Real Auth redirects, account creation, recovery, sign-out against a project and callback allow-lists remain unverified.
 
-## Authentication and security details
+### Recipes, versions and batch calculations
 
-The browser client reads only `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`; the checked-in `.env.example` placeholders remain blank. No service-role key is used or present in application source. The browser client sets `persistSession: true`, `autoRefreshToken: true`, `detectSessionInUrl: true`, and `flowType: 'pkce'`. Because this is a Vite single-page app, current session persistence uses the Supabase JS browser-storage behavior; it should not be described as an `@supabase/ssr` cookie-backed implementation.
+Recipes can be named, snapshotted as immutable in-memory versions and reloaded at an exact version. Session batch records retain the source recipe/version ID and batch code. The calculator scales recipe lines, additions and recorded discarded outputs, and keeps distinct values for raw ingredient weight, added material, total pre-cook input, measured cooked batch weight, calculated cooking loss/gain, declared discarded weight, final finished-product weight, portion weight, whole-portion count and remainder. Nutrition per 100 g and per portion is based on the calculated retained totals and measured finished yield; it does not equate raw input weight with cooked finished weight.
 
-The login/register/recovery/update/logout component tests use mocked Supabase methods and do not contact any Supabase project. A real account lifecycle, callback URL allow-list, database access, RLS enforcement and negative cross-user access have not been tested. No database migrations or schema changes were made.
+The app documents its material calculation assumption: nutrient retention is assumed except for explicitly recorded discard values. It does not currently apply AFCD cooking retention factors or a validated prepared-meal process model. Batch, recipe-version and ingredient records live only in the session adapter; they disappear when the app/page state is discarded.
 
-## Export implementation and dependency checks
+### FSANZ-informed draft NIP
 
-`src/lib/exports.ts` dynamically loads ExcelJS to create real `.xlsx` files in the browser and jsPDF to produce a recipe draft PDF. Export functions reuse `calculateRecipeTotals`, `calculateIngredientNutrition` and `roundToTwo`; they do not replace or alter the existing nutrition math. Spreadsheet text beginning with formula characters is prefixed safely, and PDF text is sanitized before rendering.
+`src/lib/fsanzNip.ts` builds the ordinary solid-food panel row set in Schedule 12 order: Energy (kJ), Protein (g), Fat total (g) with saturated fat as a sub-row, Carbohydrate (g) with sugars as a sub-row, and Sodium (mg). Fibre is not shown as an unconditional ordinary row; the user can mark it applicable. The calculation requires a finite positive finished-product yield, serving weight and package serving count, then calculates both columns from batch nutrient totals without altering the underlying calculation engine.
 
-ExcelJS is lazy-loaded. The production build therefore reports a separate approximately 939 kB minified / 271 kB gzip ExcelJS chunk; the Vite build succeeds, but this is a known download-size trade-off to review. An npm audit found a moderate advisory in ExcelJS's transitive `uuid` dependency; the manifest now pins its compatible CommonJS dependency to patched `uuid@11.1.1`. `npm audit --omit=dev` then reported zero vulnerabilities.
+The implementation displays no more than three significant figures. FSANZ's Code specifies this maximum; it does not prescribe a general decimal-place or tie-breaking convention. The software's `Intl.NumberFormat` choice is explicitly disclosed as an implementation convention, not represented as a separate statutory rule. No optional “LESS THAN” substitution is made. Tests cover row order, values, units, conditional fibre, missing nutrients, zero and non-finite inputs.
 
-First-party references used for these implementation choices include [ExcelJS browser documentation](https://www.npmjs.com/package/exceljs), [jsPDF browser usage and `doc.save`](https://github.com/parallax/jsPDF), and the [uuid security advisory](https://github.com/advisories/GHSA-w5hq-g745-h8pq). These library sources do not constitute nutrition-regulatory guidance.
+This is a limited draft. Product/claim-triggered rows, fibre's special required-zero treatment when applicable, the optional low-value expressions, liquid-food per-100-mL formatting, exemptions, classification and other full-Code exceptions still need review. The implementation baseline and sources are recorded in [FSANZ_IMPLEMENTATION_BASELINE.md](FSANZ_IMPLEMENTATION_BASELINE.md). It is not a product-specific compliance determination.
 
-## Files changed in the latest application-code milestone
+### AFCD-grounded tests
 
-- `src/lib/exports.ts` and `src/lib/exports.test.ts`: browser XLSX/PDF builders, safe text handling and file-download functions.
-- `src/App.tsx`: guarded async export actions and status messages.
-- `src/components/IngredientManager.tsx` and `src/components/IngredientManager.test.tsx`: ingredient XLSX control and UI tests.
-- `src/components/RecipeBuilder.tsx` and `src/components/RecipeBuilder.test.tsx`: recipe XLSX/PDF controls and UI tests.
-- `package.json` and `package-lock.json`: pinned ExcelJS/jsPDF dependencies and patched UUID override.
+The test fixtures use verified AFCD Release 3 profiles for raw chicken breast (F002594), uncooked white rice (F007682), tap water (F009527), and the prepared scrambled-egg-with-milk composite (F003732). Direct ingredient and chicken/rice recipe totals are regression-tested, as is the composite's published per-100-g result. Recipe quantities and process weights in the batch case are explicitly illustrative and are not described as an AFCD-published prepared-meal formula or validated cooking-yield study. Nutrient-profile data do not establish allergen status; fixture allergen arrays are placeholders only. Detailed field mappings and process limitations are in [AFCD_TEST_FIXTURE_NOTES.md](AFCD_TEST_FIXTURE_NOTES.md).
 
-The preceding Auth milestone changed `src/lib/supabase.ts`, `src/context/AuthContext.tsx`, `src/components/AuthPanel.tsx`, `src/main.tsx`, `src/App.tsx`, styling, tests and development documentation. Auth code is committed at `d2950e293b0386585bd4a35d1d23e28a48ff9c7a`; the export milestone is committed at `aaa1bccbae41438e86edbdd620530038e5525cda`.
+### Printable label draft and exports
 
-## Validation record
+The printable label uses a selected session batch and contains a product name, user-entered ingredient declaration, user-entered allergen wording, optional separate precautionary wording, batch-linked draft NIP, servings/portion size, user-entered storage instructions, batch identifier and user-entered best-before/use-by text. Product-specific source-fact review confirmations are required before print is enabled. The layout permanently displays **DRAFT — NOT REVIEWED OR APPROVED FOR COMMERCIAL USE** and states that printing is not approval. It does not infer allergens or generate legally sufficient ingredient declarations, choose date marks, substantiate shelf life or validate final commercial artwork.
 
-| Check | Result |
-|---|---|
-| `npm test` on export milestone | Passed: 32 tests across 7 test files, including 19 calculation cases, mocked Auth flows, export workbook/PDF generation, formula-safe data and export controls. |
-| `npm run build` | Passed: TypeScript and Vite production build succeeded. Vite emitted the noted separate ExcelJS chunk-size warning. |
-| `npm audit --omit=dev` | Passed after UUID override: 0 production/runtime vulnerabilities reported. |
-| `git diff --check` | Passed before the export commit. |
-| GitHub Actions – Auth milestone `d2950e2` | Passed; [run 43114463371](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/43114463371). |
-| GitHub Actions – XLSX/PDF milestone `aaa1bcc` | Passed; [run 43116172481](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/43116172481). |
-| Real Supabase registration/login/recovery, DB CRUD, RLS and production logs | Not tested; no staging project is approved and the specified production project remains inaccessible. |
-| Render/production deployment | Not performed. |
+Existing ingredient CSV/XLSX exports and recipe-calculation XLSX/PDF worksheets remain. No NIP/batch report exports or ingredient PDF export have been added.
 
-## Remaining work and safe sequence
+## Files changed in this milestone
 
-1. Wait for the user to provide or explicitly approve a separate, non-production Supabase project. Do not use either `nfzsjmzpiweeqtkypcgn` or the rejected `ndvjrsegapfhnhrjypck` for this work.
-2. Once authorized, inspect that staging project's schema and Auth settings, design an additive ownership model/migration, and test registration, login, recovery, session behavior and RLS denial between users. Do not infer production schema or migrate existing accounts by email without a verified plan.
-3. Implement persistence against the approved staging schema and preserve the established calculation engine. Add saved recipes/batches and final-yield handling only with reviewed domain requirements.
-4. Research and implement FSANZ Schedule 12 presentation/rounding rules in a separate tested change before generating any label-like output. Keep draft warnings and provenance visible; obtain appropriate product-specific review.
-5. Recheck iPhone layouts, accessibility, export behavior and build size after the final workflows exist. Report exact Render environment requirements only after staged tests pass. Do not change production configuration, merge to `main` or deploy without explicit approval.
+- `src/types.ts`, `src/lib/batchNutrition.ts`, `src/lib/batchNutrition.test.ts`: recipe/version/batch types and measured-yield calculation.
+- `src/lib/nutritionRepository.ts`, `src/lib/nutritionRepository.test.ts`: async data-access boundary with a session-only adapter, version linkage and AFCD ingredient/recipe reference tests; no remote adapter.
+- `src/components/RecipeBuilder.tsx`, `src/components/RecipeBuilder.test.tsx`, `src/components/BatchManager.tsx`, `src/components/BatchManager.test.tsx`: saved recipe versions and batch workflow.
+- `src/lib/fsanzNip.ts`, `src/lib/fsanzNip.test.ts`, `src/components/LabelBuilder.tsx`, `src/components/LabelBuilder.test.tsx`: draft NIP, label and print flow.
+- `src/test/fixtures/afcdRelease3.ts`, `AFCD_TEST_FIXTURE_NOTES.md`: sourced nutrient fixtures and provenance limitations.
+- `src/App.tsx`, `src/App.test.tsx`, `src/styles.css`: workflow wiring, explicit no-config local-only access, auth boundaries and responsive/print styles.
+- `FSANZ_IMPLEMENTATION_BASELINE.md`, `TODO.md`, `README.md`: regulatory source baseline, outcomes and current development status.
 
-## Regulatory references already identified for later review
+## Local validation and CI
 
-The earlier research record identified official sources including [Food Standards Australia New Zealand Standard 1.2.8](https://www.legislation.gov.au/F2015L00395/latest/text), [Schedule 12](https://www.legislation.gov.au/F2015L00482/latest/text), [Schedule 11](https://www.legislation.gov.au/F2015L00481/latest/text), [Standard 1.2.4 (ingredients)](https://www.legislation.gov.au/F2015L00392/latest/text), [Standard 1.2.3 (allergen declarations)](https://www.legislation.gov.au/F2015L00397/latest/text), and [FSANZ allergen-labelling guidance](https://www.foodstandards.gov.au/business/labelling/allergen-labelling). A product's classification, preparation state, claims and supplied data can affect requirements; this report and the current prototype are not a product-specific legal or compliance determination.
+On 13 November 2026, the final local-only access change passed `npm ci`, `npx tsc -b --pretty false`, `npm test` (55 tests across 12 files), `npm run build`, `npm audit --omit=dev` (zero reported production/runtime vulnerabilities) and `git diff --check`.
+
+The Vite build passed but warns that the separately loaded ExcelJS bundle is approximately 939 kB minified / 271 kB gzip. This is a known page-load/download-size trade-off. `npm ci` also reports existing transitive package deprecation warnings; they did not fail the build or audit.
+
+The user requested a development-branch commit and an actual GitHub Actions outcome. Those remain pending in this report until the commit is pushed and the corresponding run reaches a terminal state. Previous Auth and XLSX/PDF branch CI runs passed: [Auth run 43114463371](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/43114463371) and [export run 43116172481](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/43116172481). They do not prove CI for this milestone.
+
+## Remaining work
+
+1. Obtain explicit approval for a separate non-production Supabase project before any Auth/database integration. Then inspect its actual schema and Auth settings, design an additive ownership model, connect persistence and test negative cross-user RLS cases. Do not use either existing project named above.
+2. Review product/process assumptions and AFCD retention-factor handling for prepared meals; the batch model must not be treated as laboratory or process-validation evidence.
+3. Complete the applicable current Code research for actual products and claims. Implement and test required triggered nutrients, low-value displays, liquid panels, exceptions, and presentation details before any commercial label use.
+4. Add persistent recipe/ingredient/batch storage, verified source/provenance fields, broader report exports, and final artwork review only after the domain and approved schema are available.
+5. Repeat device/browser mobile and accessibility checks on the finished workflows. No final mobile smoke test was performed in this milestone.
+6. Do not merge to `main`, change Render production settings or deploy without explicit user approval.

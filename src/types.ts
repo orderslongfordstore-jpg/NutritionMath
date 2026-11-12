@@ -21,6 +21,71 @@ export interface RecipeIngredient {
   quantity: number;
 }
 
+export type NutrientValues = Pick<
+  Ingredient,
+  'energy' | 'protein' | 'carbohydrates' | 'sugars' | 'fat' | 'saturatedFat' | 'sodium' | 'fibre'
+>;
+
+export interface RecipeVersion {
+  id: string;
+  recipeId: string;
+  name: string;
+  version: number;
+  ingredients: RecipeIngredient[];
+  servings: number;
+  createdAt: string;
+}
+
+export interface SavedRecipe {
+  id: string;
+  name: string;
+  versions: RecipeVersion[];
+}
+
+export interface BatchCalculationInput {
+  recipeVersion: RecipeVersion;
+  scaleFactor: number;
+  additions: RecipeIngredient[];
+  discardedMaterials: RecipeIngredient[];
+  cookedBatchWeightGrams: number;
+  portionWeightGrams: number;
+}
+
+export interface BatchNutritionSummary {
+  rawIngredientWeightGrams: number;
+  addedMaterialWeightGrams: number;
+  totalInputWeightGrams: number;
+  cookedBatchWeightGrams: number;
+  cookingWeightLossGrams: number;
+  cookingWeightGainGrams: number;
+  discardedMaterialWeightGrams: number;
+  finalFinishedWeightGrams: number;
+  portionWeightGrams: number;
+  portions: number;
+  remainderWeightGrams: number;
+  totalNutrients: NutrientValues;
+  per100g: NutrientValues;
+  perServing: NutrientValues;
+  isValid: boolean;
+  issues: NutritionCalculationIssue[];
+}
+
+export interface BatchRecord {
+  id: string;
+  recipeId: string;
+  recipeVersionId: string;
+  recipeName: string;
+  recipeVersion: number;
+  batchCode: string;
+  recordedAt: string;
+  scaleFactor: number;
+  additions: RecipeIngredient[];
+  discardedMaterials: RecipeIngredient[];
+  cookedBatchWeightGrams: number;
+  portionWeightGrams: number;
+  calculation: BatchNutritionSummary;
+}
+
 export interface NutritionCalculationIssue {
   code: string;
   severity: 'error' | 'warning';
