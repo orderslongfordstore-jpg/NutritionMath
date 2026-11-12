@@ -14,7 +14,7 @@ Ingredient CSV/XLSX exports and recipe-calculation XLSX/PDF worksheets are also 
 
 Use Node.js 22 or a compatible current LTS release. Run `npm ci` to install exactly from the committed lockfile, `npm run dev` for the local app, `npm test` for tests, `npx tsc -b --pretty false` for type checking and `npm run build` for the production build. The app's build output is written to `dist/`.
 
-The latest local check after the explicit local-only access gate change passed `npm ci`, TypeScript, 55 tests across 12 files, Vite production build, `npm audit --omit=dev` (zero production/runtime vulnerabilities) and `git diff --check`. The build emits a known large, lazy-loaded ExcelJS chunk of approximately 939 kB minified / 271 kB gzip. GitHub Actions for this latest milestone remains pending.
+Implementation commit `4c343c3454ec06fb4d3581961681eca8bdaf5d08` passed local `npm ci`, TypeScript, 55 tests across 12 files, Vite production build, `npm audit --omit=dev` (zero production/runtime vulnerabilities) and `git diff --check`; GitHub Actions run [43225894268](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/43225894268) also passed for that exact SHA. The build emits a known large, lazy-loaded ExcelJS chunk of approximately 939 kB minified / 271 kB gzip.
 
 ## Supabase configuration and data safety
 

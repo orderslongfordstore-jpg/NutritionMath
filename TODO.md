@@ -78,7 +78,7 @@
 - [ ] Complete missing persistent product workflows while preserving verified behavior from original source when available.
 - [ ] Verify additional iPhone/tablet/desktop breakpoints and accessibility against final authenticated screens.
 
-## 8. Quality assurance and deployment preparation — local checks pass; current branch CI pending
+## 8. Quality assurance and deployment preparation — current branch CI passes; remote/database checks pending
 
 - [x] Prior XLSX/PDF milestone passed `npm test`: 32 tests across 7 files.
 - [x] Run `npm ci`, `npx tsc -b --pretty false`, `npm test`, `npm run build`, `npm audit --omit=dev` and `git diff --check` on 13 November 2026.
@@ -87,6 +87,7 @@
 - [x] Run `npm audit --omit=dev`: zero production/runtime vulnerabilities after pinning ExcelJS's `uuid` dependency to patched `11.1.1`.
 - [x] Run `git diff --check` before the export milestone commit.
 - [x] GitHub Actions passed for Auth milestone `d2950e293b0386585bd4a35d1d23e28a48ff9c7a` (run [43114463371](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/43114463371)) and XLSX/PDF milestone `aaa1bccbae41438e86edbdd620530038e5525cda` (run [43116172481](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/43116172481)).
+- [x] Current recipe/batch/NIP/label milestone `4c343c3454ec06fb4d3581961681eca8bdaf5d08` passed GitHub Actions run [43225894268](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/43225894268).
 - [ ] Validate real Auth, database migrations, RLS boundaries and server logs in an approved non-production environment.
 - [ ] Document exact staging/production environment variables only after the integration plan and tests are reviewed; do not change production configuration or deploy without approval.
 
@@ -95,6 +96,6 @@
 - [x] Work only on `development/nutritionpro-foundation`; do not push development work to `main`.
 - [x] Commit and push the native Auth milestone (`d2950e2`) and browser XLSX/PDF milestone (`aaa1bcc`) to the development branch; both GitHub Actions runs passed.
 - [x] Update this checklist and the feature-preservation report for the current development state.
-- [ ] Commit and push the verified current milestone only to `development/nutritionpro-foundation`; record the returned SHA and actual Actions run outcome.
+- [x] Commit and push the verified current milestone only to `development/nutritionpro-foundation`; commit `4c343c3454ec06fb4d3581961681eca8bdaf5d08`; its exact Actions run passed.
 - [ ] Continue only with work that does not require unapproved Supabase access; wait for explicit staging-project approval before integration.
 - [ ] Final handoff must distinguish source facts, locally/mock-tested behavior, unverified remote integrations, current branch/commit, test results and the absence of any production deployment.

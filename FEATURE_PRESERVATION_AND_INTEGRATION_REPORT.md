@@ -2,8 +2,8 @@
 
 **Updated:** 13 November 2026
 **Development branch:** `development/nutritionpro-foundation`
-**Baseline commit:** `c8a65be47a1a0f2b3c13bba289c7e7ea252f6325`
-**Current milestone:** local checks passed; commit and GitHub Actions result pending
+**Implementation commit:** `4c343c3454ec06fb4d3581961681eca8bdaf5d08`
+**GitHub Actions:** passed — run [43225894268](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/43225894268)
 **Scope:** Work only on the authorized development branch. No production Render service or Supabase project was contacted or changed.
 
 ## Current result
@@ -66,7 +66,7 @@ On 13 November 2026, the final local-only access change passed `npm ci`, `npx ts
 
 The Vite build passed but warns that the separately loaded ExcelJS bundle is approximately 939 kB minified / 271 kB gzip. This is a known page-load/download-size trade-off. `npm ci` also reports existing transitive package deprecation warnings; they did not fail the build or audit.
 
-The user requested a development-branch commit and an actual GitHub Actions outcome. Those remain pending in this report until the commit is pushed and the corresponding run reaches a terminal state. Previous Auth and XLSX/PDF branch CI runs passed: [Auth run 43114463371](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/43114463371) and [export run 43116172481](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/43116172481). They do not prove CI for this milestone.
+The implementation was pushed to `development/nutritionpro-foundation` as `4c343c3454ec06fb4d3581961681eca8bdaf5d08`. GitHub Actions run [43225894268](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/43225894268) completed successfully for that exact SHA. Previous Auth and XLSX/PDF branch CI runs also passed: [Auth run 43114463371](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/43114463371) and [export run 43116172481](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/43116172481).
 
 ## Remaining work
 
