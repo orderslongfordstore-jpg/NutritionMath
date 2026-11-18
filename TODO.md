@@ -88,6 +88,6 @@
 - [x] `npm audit --omit=dev`: 0 production/runtime vulnerabilities.
 - [x] `git diff --check` passed.
 - [x] Prior milestone at `4c343c3454ec06fb4d3581961681eca8bdaf5d08` passed Actions run [43225894268](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/43225894268).
-- [ ] Commit/push the current implementation and documentation only to `development/nutritionpro-foundation`; record the exact new commit SHA and actual CI run.
+- [x] Commit/push implementation commit `3c88195c9932b294098b877904d297ae2cc270ef` only to `development/nutritionpro-foundation`; GitHub Actions run [44307322463](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/44307322463) passed.
 - [ ] Do not push to `main`, modify Render, deploy production, connect unapproved Supabase, or alter production data.
 - [ ] Not ready for staging deployment: real Auth/database/RLS, persistence, real curry-sausages product input and process validation, complete FSANZ review and qualified commercial label approval remain outstanding.

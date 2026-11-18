@@ -1,6 +1,6 @@
 # NutritionPro feature-preservation and integration report
 
-**Checked:** 18 November 2026. **Repository/branch:** `orderslongfordstore-jpg/NutritionMath`, `development/nutritionpro-foundation`. **Latest previously pushed commit:** `058d3b31c06d4d826289d9e5cb4df9ebf5f03930`. The new changes described here are local, not yet committed/pushed; their CI result is pending. This is the authorized development foundation, not confirmed original production source code.
+**Checked:** 18 November 2026. **Repository/branch:** `orderslongfordstore-jpg/NutritionMath`, `development/nutritionpro-foundation`. **Implementation commit:** `3c88195c9932b294098b877904d297ae2cc270ef`; its GitHub Actions run passed. This is the authorized development foundation, not confirmed original production source code.
 
 ## Executive summary
 
@@ -54,6 +54,6 @@ The implementation changes span `plan.md`, `TODO.md`, `src/App.tsx`, `src/types.
 
 ## Validation and next steps
 
-On 18 November 2026, `npm ci`, `npx tsc -b --pretty false`, `npm test` (**81/81 tests, 17/17 files**), `npm run build`, `npm audit --omit=dev` (**0 production/runtime vulnerabilities**) and `git diff --check` passed. The Vite build succeeds with the known ExcelJS bundle warning. The prior pushed implementation SHA `4c343c3454ec06fb4d3581961681eca8bdaf5d08` passed [GitHub Actions run 43225894268](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/43225894268); the new milestone's commit/push/CI remains pending.
+On 18 November 2026, `npm ci`, `npx tsc -b --pretty false`, `npm test` (**81/81 tests, 17/17 files**), `npm run build`, `npm audit --omit=dev` (**0 production/runtime vulnerabilities**) and `git diff --check` passed. The Vite build succeeds with the known ExcelJS bundle warning. Implementation commit `3c88195c9932b294098b877904d297ae2cc270ef` passed [GitHub Actions run 44307322463](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/44307322463). The preceding implementation SHA `4c343c3454ec06fb4d3581961681eca8bdaf5d08` also passed [run 43225894268](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/43225894268).
 
-Next: commit and push only to `development/nutritionpro-foundation`, record the exact SHA and actual Actions result, and wait for a separately approved staging Supabase project before remote integration. Do not merge, alter Render or production data, or deploy without explicit approval. This prototype is not ready for staging or commercial use until its real product inputs, process model, remote security/data work, full current-Code review and qualified label review are resolved.
+Next: continue only on `development/nutritionpro-foundation` and wait for a separately approved staging Supabase project before remote integration. Do not merge, alter Render or production data, or deploy without explicit approval. This prototype is not ready for staging or commercial use until its real product inputs, process model, remote security/data work, full current-Code review and qualified label review are resolved.

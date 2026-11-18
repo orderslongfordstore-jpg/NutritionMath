@@ -18,7 +18,7 @@ Ingredient CSV/XLSX, recipe worksheet PDF/XLSX and label-draft PDF/XLSX exports 
 
 Use Node.js 22 or compatible current LTS. Run `npm ci`, `npm run dev`, `npm test`, `npx tsc -b --pretty false` and `npm run build`. Build output is written to `dist/`.
 
-On 18 November 2026, `npm ci`, TypeScript, **81 tests across 17 files**, production build, `npm audit --omit=dev` (zero production/runtime vulnerabilities) and `git diff --check` passed. The build warns that the lazy-loaded ExcelJS chunk is approximately 938.56 kB minified / 271.04 kB gzip, above Vite's 500 kB warning threshold. These current implementation changes are awaiting their development-branch commit and CI result. Earlier implementation SHA `4c343c3454ec06fb4d3581961681eca8bdaf5d08` passed [Actions run 43225894268](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/43225894268).
+On 18 November 2026, `npm ci`, TypeScript, **81 tests across 17 files**, production build, `npm audit --omit=dev` (zero production/runtime vulnerabilities) and `git diff --check` passed. The build warns that the lazy-loaded ExcelJS chunk is approximately 938.56 kB minified / 271.04 kB gzip, above Vite's 500 kB warning threshold. Implementation commit `3c88195c9932b294098b877904d297ae2cc270ef` passed [Actions run 44307322463](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/44307322463). Earlier implementation SHA `4c343c3454ec06fb4d3581961681eca8bdaf5d08` also passed [run 43225894268](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/43225894268).
 
 ## Supabase and data safety
 
