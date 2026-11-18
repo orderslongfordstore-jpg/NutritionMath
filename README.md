@@ -1,6 +1,6 @@
 # NutritionMath
 
-NutritionMath is an independent Australian nutrition and food-production platform. This branch implements **Stage 1: foundation, authentication and dashboard**. Ingredients, recipes, calculations, labels and other later modules are not yet operational. See [ROADMAP.md](ROADMAP.md) for the staged plan and [STAGE-1-AUTH-VERIFICATION.md](STAGE-1-AUTH-VERIFICATION.md) for current authentication results and outstanding blockers.
+NutritionMath is an independent Australian nutrition and food-production platform. This branch implements **Stage 1: foundation, authentication and dashboard**. Ingredients, recipes, calculations, labels and other later modules are not yet operational. See [ROADMAP.md](ROADMAP.md) for the staged plan, [STAGE-1-AUTH-VERIFICATION.md](STAGE-1-AUTH-VERIFICATION.md) for authentication results and blockers, and [STAGE-2-PREPARATION.md](STAGE-2-PREPARATION.md) for the proposed ingredient and supplier work.
 
 ## Technology
 
@@ -44,6 +44,6 @@ This stage is not a production deployment or a claim of food-labelling complianc
 
 <!-- Repository write-access verification: harmless README update. -->
 
-## Known development-tool advisory
+## Development-tool advisory status
 
-As of 19 November 2026, `pnpm audit` reports [GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf), a high-severity ReDoS issue in the transitive **development-only** `picomatch` dependency. The advisory lists no patched release. The application does not accept user-supplied glob patterns. Keep development/build tooling private and do not process untrusted glob inputs in trusted build jobs. `pnpm audit --prod` reported no known production dependency vulnerabilities at the time of this review. The [full report](INDEPENDENT-AUTH-REPORT.md) discusses limitations and remediation options. Audit results can change.
+The earlier review reported [GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf) in the transitive development-only `picomatch` dependency. On the morning of 19 November 2026, GitHub marked that advisory withdrawn and both `pnpm audit` and `pnpm audit --prod` reported no known vulnerabilities. The installed dependency was not changed; the [NVD record](https://nvd.nist.gov/vuln/detail/CVE-2026-112366) still described the original report and was awaiting enrichment when checked. Keep build/test tooling private, avoid untrusted glob inputs and recheck advisory sources as they evolve. See [STAGE-2-PREPARATION.md](STAGE-2-PREPARATION.md) for the current evidence and [INDEPENDENT-AUTH-REPORT.md](INDEPENDENT-AUTH-REPORT.md) for the historical review.

@@ -1,5 +1,7 @@
 # Stage 1 authentication verification
 
+> The authentication results below remain the last live verification. A later review found that the previously cited Picomatch advisory was withdrawn and both dependency audits returned no known vulnerabilities; see [STAGE-2-PREPARATION.md](STAGE-2-PREPARATION.md). This does not change the outstanding authentication blockers.
+
 **Status: not complete.** The independent NutritionMath project was used to create and confirm a dedicated test account, sign in and out, and validate a real authenticated API request. A password-reset email arrived, but its one-time link returned `otp_expired` at its first observed use, so a password update and login with a changed password are **not verified**. Do not begin Stage 2. This report records work on 19 November 2026 (Australia/Sydney).
 
 ## Independent project and scope
