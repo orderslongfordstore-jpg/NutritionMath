@@ -89,6 +89,6 @@
 - [x] Full `npm audit` run and documented in `DEPENDENCY_AUDIT.md`: five high-severity dependency paths refer to one unpatched `picomatch` GHSA-fc5q-39xc-vjpf in development/test tooling. Upstream lists no patched release; do not hide the finding or use an unverified override.
 - [x] `git diff --check` passed after the current toolchain and documentation updates.
 - [x] Prior implementation commit `3c88195c9932b294098b877904d297ae2cc270ef` passed Actions run [44307322463](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/44307322463). Documentation follow-up `4fe66f57a2ccd6401f1963792820d7a2f33bafdf` passed [run 44307591068](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/44307591068).
-- [ ] Commit/push the verified toolchain and audit documentation only to `development/nutritionpro-foundation`; record its SHA and Actions result.
+- [x] Commit/push verified toolchain and audit documentation only to `development/nutritionpro-foundation`: implementation commit `1d077c4419335f810c411262d226cda3030c065a`; Actions run [44310025854](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/44310025854) passed.
 - [ ] Do not push to `main`, modify Render, deploy production, connect unapproved Supabase, or alter production data.
 - [ ] Not ready for staging deployment: real Auth/database/RLS, persistence, real curry-sausages product input and process validation, complete FSANZ review and qualified commercial label approval remain outstanding.

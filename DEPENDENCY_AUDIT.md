@@ -18,7 +18,7 @@ This means the **full** `npm audit` remains nonzero until the upstream publishes
 
 ## Verification after toolchain upgrade
 
-On 19 November 2026, `npm ci` completed with Node 22.23.4/npm 10.9.9; `npx tsc -b --pretty false` passed; `npm test` passed **81/81 tests across 17/17 files**; and `npm run build` passed under Vite 6.4.6. The build retains the known lazy-loaded ExcelJS chunk warning (940.19 kB minified / 271.33 kB gzip). `npm audit --omit=dev` returned zero vulnerabilities. Full `npm audit` returned five high-severity package paths, all from the single unpatched Picomatch advisory above. Current branch CI is pending the follow-up push.
+On 19 November 2026, `npm ci` completed with Node 22.23.4/npm 10.9.9; `npx tsc -b --pretty false` passed; `npm test` passed **81/81 tests across 17/17 files**; and `npm run build` passed under Vite 6.4.6. The build retains the known lazy-loaded ExcelJS chunk warning (940.19 kB minified / 271.33 kB gzip). `npm audit --omit=dev` returned zero vulnerabilities. Full `npm audit` returned five high-severity package paths, all from the single unpatched Picomatch advisory above. Implementation commit `1d077c4419335f810c411262d226cda3030c065a` passed [GitHub Actions run 44310025854](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/44310025854).
 
 ## Original advisories
 

@@ -1,6 +1,6 @@
 # NutritionPro feature-preservation and integration report
 
-**Checked:** 19 November 2026. **Repository/branch:** `orderslongfordstore-jpg/NutritionMath`, `development/nutritionpro-foundation`. The code/toolchain follow-up is locally verified and awaits its branch commit and CI. The current foundation is authorized development work, not confirmed original production source code.
+**Checked:** 19 November 2026. **Repository/branch:** `orderslongfordstore-jpg/NutritionMath`, `development/nutritionpro-foundation`. Toolchain implementation commit `1d077c4419335f810c411262d226cda3030c065a` is pushed and passed [GitHub Actions run 44310025854](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/44310025854). The current foundation is authorized development work, not confirmed original production source code.
 
 ## Summary
 
@@ -54,7 +54,7 @@ No staging Supabase project has been approved. Production project `nfzsjmzpiweeq
 
 The asynchronous session-memory repository is only a future data-access boundary, not a fake Supabase adapter. Real Auth, persistent CRUD, ownership/RLS and compatibility with any original production schema/source remain unverified. No migration plan can responsibly claim preservation of original accounts or records without authorized inspection of those sources.
 
-## Files changed in the current toolchain follow-up
+## Files changed in the toolchain follow-up
 
 - `package.json` and `package-lock.json`: pinned Vite/Vitest/React-plugin updates.
 - `tsconfig.node.json`: ESM-aware type resolution for Vite config declarations.
@@ -65,6 +65,6 @@ The preceding NutritionPro implementation modified `src/App.tsx`, `src/types.ts`
 
 ## Validation and remaining work
 
-On 19 November 2026, `npm ci`, `npx tsc -b --pretty false`, `npm test` (**81/81 tests across 17/17 files**), `npm run build`, `npm audit --omit=dev` (**0 runtime findings**) and `git diff --check` passed. The production build warns that the lazy-loaded ExcelJS chunk is 940.19 kB minified / 271.33 kB gzip. Full `npm audit` remains nonzero for the documented Picomatch finding. The current toolchain follow-up is locally verified; branch CI is pending push.
+On 19 November 2026, `npm ci`, `npx tsc -b --pretty false`, `npm test` (**81/81 tests across 17/17 files**), `npm run build`, `npm audit --omit=dev` (**0 runtime findings**) and `git diff --check` passed. The production build warns that the lazy-loaded ExcelJS chunk is 940.19 kB minified / 271.33 kB gzip. Full `npm audit` remains nonzero for the documented Picomatch finding. Toolchain implementation commit `1d077c4419335f810c411262d226cda3030c065a` passed [GitHub Actions run 44310025854](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/44310025854).
 
-Next: commit and push only to `development/nutritionpro-foundation`, then record its exact SHA and Actions result. Wait for a separately approved staging Supabase project before remote integration. Do not merge, alter Render or production data, or deploy without explicit approval. This prototype is not ready for staging or commercial use until real product inputs, process validation, remote Auth/data/RLS work, full current-Code review and qualified label review are complete.
+Continue only on `development/nutritionpro-foundation` and wait for a separately approved staging Supabase project before remote integration. Do not merge, alter Render or production data, or deploy without explicit approval. This prototype is not ready for staging or commercial use until real product inputs, process validation, remote Auth/data/RLS work, full current-Code review and qualified label review are complete.
