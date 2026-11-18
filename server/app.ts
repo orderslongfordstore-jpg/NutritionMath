@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import express, { type ErrorRequestHandler } from 'express';
 import path from 'node:path';
+import { supabaseProjectUrlStatus } from './supabaseProject.js';
 
 /** A verifier must authenticate the supplied token, not merely decode it. */
 export type TokenVerifier = (token: string) => Promise<{ id: string } | null>;
@@ -33,7 +34,7 @@ function isServiceRoleKey(key: string): boolean {
 function createSupabaseVerifier(url: string | undefined, anonKey: string | undefined): TokenVerifier | undefined {
   const cleanUrl = url?.trim();
   const cleanKey = anonKey?.trim();
-  if (!cleanUrl || !cleanKey || isServiceRoleKey(cleanKey)) return undefined;
+  if (!cleanUrl || supabaseProjectUrlStatus(cleanUrl) !== 'allowed' || !cleanKey || isServiceRoleKey(cleanKey)) return undefined;
 
   try {
     const supabase = createClient(cleanUrl, cleanKey, {
@@ -96,8 +97,10 @@ export function createApp(options: AppOptions = {}): express.Express {
   app.use(express.json({ limit: '16kb' }));
   app.use(express.urlencoded({ extended: false, limit: '16kb', parameterLimit: 100 }));
 
-  const verifyToken = options.verifyToken ?? createSupabaseVerifier(
-    options.supabaseUrl ?? process.env.SUPABASE_URL,
+  const supabaseUrl = options.supabaseUrl ?? process.env.SUPABASE_URL;
+  const blockedProject = supabaseProjectUrlStatus(supabaseUrl) === 'blocked';
+  const verifyToken = blockedProject ? undefined : options.verifyToken ?? createSupabaseVerifier(
+    supabaseUrl,
     options.supabaseAnonKey ?? process.env.SUPABASE_ANON_KEY,
   );
 
@@ -115,7 +118,9 @@ export function createApp(options: AppOptions = {}): express.Express {
       return;
     }
     if (!verifyToken) {
-      res.status(503).json({ error: 'Authentication unavailable' });
+      res.status(503).json(blockedProject
+        ? { error: 'Authentication unavailable', configuration: 'The previously used shared Supabase project is blocked. Configure SUPABASE_URL and SUPABASE_ANON_KEY for a separate project.' }
+        : { error: 'Authentication unavailable' });
       return;
     }
     try {

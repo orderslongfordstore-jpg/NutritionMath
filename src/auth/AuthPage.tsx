@@ -39,7 +39,7 @@ function callbackUrl(): string {
 }
 
 export function AuthPage() {
-  const { session, loading, configured, recovery, notice: authNotice, dismissNotice, signOut, completeRecovery } = useAuth();
+  const { session, loading, configured, configurationError, recovery, notice: authNotice, dismissNotice, signOut, completeRecovery } = useAuth();
   const [mode, setMode] = useState<Mode>('sign-in');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -168,13 +168,13 @@ export function AuthPage() {
               <h1 id={`${id}-title`}>{title}</h1>
               <p>{description}</p>
               {configured && !loading && !isSignedIn && (
-                <p className="nm-auth__shared-account">Your Supabase account may also be used by other apps.{(isRecovery || mode === 'reset') && ' Changing your password affects all apps using this account.'}</p>
+                <p className="nm-auth__shared-account">Accounts belong to the configured Supabase project.{(isRecovery || mode === 'reset') && ' If other apps use this same account and project, changing your password affects those apps too.'}</p>
               )}
             </div>
 
             {!configured ? (
               <div className="nm-auth__setup" role="status">
-                Set <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> in your Vite environment, then restart the app. Use a public anon or publishable key, never a service-role key.
+                {configurationError ?? <>Set <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> in your Vite environment, then restart the app. Use a public anon or publishable key, never a service-role key.</>}
               </div>
             ) : loading ? (
               <p className="nm-auth__loading" role="status">Loading your session…</p>

@@ -57,7 +57,7 @@ describe('public API and headers', () => {
 describe('GET /api/me', () => {
   it('rejects missing or malformed authorization without calling the verifier', async () => {
     const verifyToken = vi.fn();
-    const app = createApp({ verifyToken });
+    const app = createApp({ ...unavailableConfig, verifyToken });
     for (const header of [undefined, 'Basic abc', 'Bearer', 'Bearer abc def', 'Bearer abc,def', 'Bearer ' + 'x'.repeat(8193)]) {
       const req = request(app).get('/api/me');
       if (header) req.set('Authorization', header);
@@ -72,7 +72,7 @@ describe('GET /api/me', () => {
 
   it('rejects a token the verifier does not authenticate', async () => {
     const verifyToken = vi.fn().mockResolvedValue(null);
-    const response = await request(createApp({ verifyToken })).get('/api/me').set('Authorization', 'Bearer bad.token');
+    const response = await request(createApp({ ...unavailableConfig, verifyToken })).get('/api/me').set('Authorization', 'Bearer bad.token');
     expect(response.status).toBe(401);
     expect(response.body).toEqual({ error: 'Unauthorized' });
     expect(verifyToken).toHaveBeenCalledWith('bad.token');
@@ -80,7 +80,7 @@ describe('GET /api/me', () => {
 
   it('returns only the verified user id', async () => {
     const verifyToken = vi.fn().mockResolvedValue({ id: 'user-123', email: 'private@example.test', metadata: { secret: true } });
-    const response = await request(createApp({ verifyToken })).get('/api/me').set('Authorization', 'bearer good-token');
+    const response = await request(createApp({ ...unavailableConfig, verifyToken })).get('/api/me').set('Authorization', 'bearer good-token');
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ user: { id: 'user-123' } });
     expect(response.text).not.toContain('good-token');
@@ -90,7 +90,7 @@ describe('GET /api/me', () => {
   });
 
   it('fails closed when the verifier returns an invalid identity', async () => {
-    const response = await request(createApp({ verifyToken: async () => ({ id: '' }) }))
+    const response = await request(createApp({ ...unavailableConfig, verifyToken: async () => ({ id: '' }) }))
       .get('/api/me').set('Authorization', 'Bearer token');
     expect(response.status).toBe(401);
   });
@@ -99,7 +99,7 @@ describe('GET /api/me', () => {
     const log = vi.spyOn(console, 'log');
     const error = vi.spyOn(console, 'error');
     try {
-      const response = await request(createApp({ verifyToken: async () => { throw new Error('sensitive-token'); } }))
+      const response = await request(createApp({ ...unavailableConfig, verifyToken: async () => { throw new Error('sensitive-token'); } }))
         .get('/api/me').set('Authorization', 'Bearer sensitive-token');
       expect(response.status).toBe(503);
       expect(response.body).toEqual({ error: 'Authentication unavailable' });

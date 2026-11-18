@@ -1,6 +1,6 @@
 # NutritionMath
 
-NutritionMath is an independent Australian nutrition and food-production platform. This branch implements **Stage 1: foundation, authentication and dashboard**. Ingredients, recipes, calculations, labels and other modules shown as planned are not yet operational. See [ROADMAP.md](ROADMAP.md) for the staged development plan.
+NutritionMath is an independent Australian nutrition and food-production platform. This branch implements **Stage 1: foundation, authentication and dashboard**. Ingredients, recipes, calculations, labels and other later modules are not yet operational. See [ROADMAP.md](ROADMAP.md) for the staged plan and [INDEPENDENT-AUTH-REPORT.md](INDEPENDENT-AUTH-REPORT.md) for the current isolation and authentication-readiness review.
 
 ## Technology
 
@@ -10,31 +10,40 @@ React, TypeScript and Vite on the client; Node.js and Express on the server; Sup
 
 - Node.js 22.22.2 or later in the 22.x line (the development version is specified in `.nvmrc`; other supported versions are listed in `package.json`).
 - pnpm 11.25.0, for example via Corepack.
-- A Supabase project with email/password authentication enabled. If email confirmations are enabled, users must confirm their email before signing in.
+- A **separate NutritionMath Supabase project** with email/password authentication, after its creation or selection has been approved. Do not use the previous shared NutritionPro project. No project is provisioned by this repository.
 
-## Local development
+## Local development and configuration
 
 1. Install dependencies: `pnpm install --frozen-lockfile`.
-2. Copy `.env.example` to `.env`. Fill in the Supabase project URL and **publishable or legacy anon key** in both the `VITE_` client variables and the server variables. The `VITE_` values are embedded into the browser build; never put a service-role key, secret key, password or database connection string there. `.env` is ignored by Git.
-3. Verify the existing Supabase Auth redirect allowlist and email settings before testing confirmation or recovery. The client sends the current page URL without its query or fragment as the callback (for example, `http://localhost:5173/` for a local root-page visit). Supabase may otherwise fall back to its configured Site URL. The currently approved Supabase project is shared: **do not change its authentication settings without separate approval**, because changes can affect other applications. If the required callback is not already allowed, obtain approval first or use a separate project.
-4. Run `pnpm dev`. Open the Vite URL printed in the console (normally `http://localhost:5173`). The dev server proxies `/api` to Express on port 3000.
-5. Run `pnpm check`, `pnpm test`, and `pnpm build` for the type check, automated tests and production build. Use `pnpm start` to run the built Express server and frontend; `PORT` controls the listener.
+2. Copy `.env.example` to `.env`. It contains blank Supabase values. Leave them blank until an independent project is approved and available. With no configuration, the app shows setup guidance instead of signing in.
+3. From the independent project's dashboard, enter its project URL and a **publishable or legacy anon key** as `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. Use the same project URL as `SUPABASE_URL` and a publishable/anon key from the same project as `SUPABASE_ANON_KEY`. The key pairs may be the same or distinct public keys for the same project. Do not use a service-role or secret key. `.env` and `.env.*` other than `.env.example` are ignored by Git.
+4. Configure and verify that independent project's email/password provider, confirmation policy, email delivery, Site URL and allowed redirects before live account testing. The client sends the current origin and pathname, excluding query and fragment. For a root-page visit at the normal Vite development address the callback is `http://localhost:5173/`; `127.0.0.1`, a different port, path or trailing-slash form is a different URL. Use the actual printed development address and exact approved production HTTPS address. Do not alter the former shared project. See the report for the compatible email-link flow and setup checklist.
+5. Run `pnpm dev` and open the Vite URL printed in the console. The dev server proxies `/api` to Express at the configured `PORT` (default 3000). Vite loads mode-specific environment files; Express loads `.env` and process environment variables. Confirm that both resolve to the same independent project.
+6. Run `pnpm check`, `pnpm test`, and `pnpm build` for type checks, automated tests and the production build. Use `pnpm start` to run the built Express server and frontend; `PORT` controls the listener.
 
-## Shared authentication and security
+The `VITE_` variables are embedded at **client build time** and visible to anyone using the website. Never put a secret key, service-role key, password, database connection string or other secret in any `VITE_` variable. The server variables are read at **runtime**; they require only a project URL and public key. The application does not need a database password, JWT signing secret or Supabase service-role key for Stage 1.
 
-The user approved the existing **NutrientsMath** Supabase project as the authentication provider. Its auth pool is shared with other applications, including NutritionPro: account creation, password resets, password changes and sign-out can affect those shared identities. This repository neither reads nor changes NutritionPro tables. No database migration or authentication setting is applied by this stage.
+Before deploying, verify that the Vite build and the server runtime use the same independent project, then rebuild and replace all old client assets. Merely changing the server's runtime settings does not change an already-built browser bundle. A mismatch can allow browser sign-in while `/api/me` rejects that project's token. Confirm any deployed or cached older assets are retired; an already-running old app is not retroactively changed by a Git commit.
 
-Supabase sessions are managed by the official browser client using a NutritionMath-specific, project-scoped storage key, so this app does not intentionally share a same-origin session with other apps. Sessions created under an earlier key are not migrated; sign in again if needed. Browser storage and access tokens are exposed to JavaScript running on the same origin, so protect against XSS, restrict third-party scripts, use HTTPS in production, and apply appropriate access controls and row-level security when data features are added. The Express `/api/me` endpoint validates access tokens through Supabase rather than trusting client-supplied user IDs. Supabase publishable/anon keys are not authorization; future tables need correctly scoped RLS.
+## Authentication and security
 
-Production environment variables must be set both **when building the Vite client** (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) and **at server runtime** (`SUPABASE_URL`, `SUPABASE_ANON_KEY`). Use separate development and production Supabase projects where practical. Before public release, verify approved redirect URLs, email delivery, application URL, rate limits, account policies and deployment security. Any change to the shared Supabase project settings requires separate approval. The password-recovery marker coordinates this app across browser tabs as a user-interface safeguard, not as server-side authorization, and is not shared across devices or applications. This stage is not a production deployment or a claim of food-labelling compliance.
+Until this follow-up, local development pointed at the **NutrientsMath** Supabase project, a shared authentication pool containing NutritionPro tables. A project-specific browser storage key did not isolate its remote users, passwords, policies or email configuration. The local workspace is now disconnected, and an independent project has not yet been created or selected. No shared-project users, passwords, settings or data have been changed in this follow-up. Existing accounts and sessions are not automatically migrated to a new project.
+
+Both the browser and server reject the former project's known direct hostname. This cannot detect a custom domain or proxy pointing to the same project, or prove that another URL is independent: verify project ownership and identity before configuring it. Vite also rejects known Supabase `sb_secret_` and `service_role` JWT formats in `VITE_` values; this is not a complete secret scanner.
+
+The client uses the official Supabase JavaScript client and project-scoped browser storage. Browser storage and access tokens are exposed to JavaScript running on the same origin; protect against XSS, restrict third-party scripts and use HTTPS in production. The Express `/api/me` endpoint validates access tokens through Supabase rather than trusting client-supplied user IDs. Publishable/anon keys are not authorization; future tables need appropriately scoped row-level security and business access checks. The recovery marker coordinates this app across browser tabs as a user-interface safeguard, not server-side authorization, and is not shared across devices or other applications.
+
+This application currently uses the SDK's **implicit email-link flow** and the current page URL as its callback. It does not implement a dedicated PKCE code exchange or token-hash verification route. Do not change email templates to a code-only or token-hash-only flow and assume it works; implement and test that flow first if required.
+
+This stage is not a production deployment or a claim of food-labelling compliance. Stage 2 requires explicit approval.
 
 ## API
 
 - `GET /api/health`: unauthenticated health status.
-- `GET /api/me`: authenticated identity, requiring `Authorization: Bearer <Supabase access token>`; invalid or missing tokens fail closed.
+- `GET /api/me`: authenticated identity, requiring `Authorization: Bearer <Supabase access token>`; missing or invalid tokens fail closed.
 
 <!-- Repository write-access verification: harmless README update. -->
 
 ## Known development-tool advisory
 
-As of 18 November 2026, `pnpm audit` reports [GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf), a high-severity ReDoS issue in the transitive **development-only** `picomatch` dependency. The advisory lists no patched release. The application does not accept user-supplied glob patterns; do not expose development tooling to untrusted users, and update this dependency when an upstream fix becomes available. `pnpm audit --prod` reported no known vulnerabilities at the time of this review. Audit results can change.
+As of 19 November 2026, `pnpm audit` reports [GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf), a high-severity ReDoS issue in the transitive **development-only** `picomatch` dependency. The advisory lists no patched release. The application does not accept user-supplied glob patterns. Keep development/build tooling private and do not process untrusted glob inputs in trusted build jobs. `pnpm audit --prod` reported no known production dependency vulnerabilities at the time of this review. The [full report](INDEPENDENT-AUTH-REPORT.md) discusses limitations and remediation options. Audit results can change.

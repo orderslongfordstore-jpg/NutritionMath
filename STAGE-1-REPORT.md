@@ -1,5 +1,7 @@
 # Stage 1 inspection and verification report
 
+> Historical record of the original Stage 1 work. The subsequent decision to use a separate Supabase project supersedes the shared-authentication plan described below. See [INDEPENDENT-AUTH-REPORT.md](INDEPENDENT-AUTH-REPORT.md) for the current status.
+
 ## Existing repository
 
 The existing public GitHub repository is `orderslongfordstore-jpg/NutritionMath`. The working branch was `stage-1-foundation` at `7b90e163ff9e0e0ec1396b7f46e9358b8a7b427c` before this work. The authenticated account had repository admin and push permission. The repository was cloned rather than recreated; its history was preserved. The separate NutritionPro repository was not changed.

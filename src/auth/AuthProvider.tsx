@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createClient, type Session, type SupabaseClient } from '@supabase/supabase-js';
+import { supabaseProjectUrlStatus } from '../../server/supabaseProject.js';
 
 // These are public browser credentials. Never put a service-role key in a Vite variable.
 const env = import.meta.env as {
@@ -64,7 +65,11 @@ function normalizedProjectUrl(value: string | undefined): string | null {
   }
 }
 
-const projectUrl = normalizedProjectUrl(env.VITE_SUPABASE_URL);
+const projectStatus = supabaseProjectUrlStatus(env.VITE_SUPABASE_URL);
+const projectUrl = projectStatus === 'allowed' ? normalizedProjectUrl(env.VITE_SUPABASE_URL) : null;
+const configurationError = projectStatus === 'blocked'
+  ? 'The previously used shared Supabase project is blocked. Configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY for a separate project.'
+  : null;
 const storagePrefix = projectUrl ? `nutritionmath.auth.${encodeURIComponent(projectUrl)}` : null;
 const recoveryPrefix = `${storagePrefix}.recovery.`;
 const pendingPrefix = `${storagePrefix}.recovery-pending.`;
@@ -223,6 +228,7 @@ export interface AuthContextValue {
   session: Session | null;
   loading: boolean;
   configured: boolean;
+  configurationError: string | null;
   recovery: boolean;
   notice: AuthNotice | null;
   dismissNotice: () => void;
@@ -391,7 +397,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ session, loading, configured: Boolean(supabase), recovery, notice: storageNotice ?? notice, dismissNotice, signOut, completeRecovery }}>
+    <AuthContext.Provider value={{ session, loading, configured: Boolean(supabase), configurationError, recovery, notice: storageNotice ?? notice, dismissNotice, signOut, completeRecovery }}>
       {children}
     </AuthContext.Provider>
   );

@@ -51,6 +51,8 @@ describe('AuthPage', () => {
   it('signs in with the supplied credentials', async () => {
     const user = userEvent.setup();
     render(<AuthPage />);
+    expect(screen.getByText('Accounts belong to the configured Supabase project.')).toBeTruthy();
+    expect(screen.queryByText(/account may also be used by other apps/i)).toBeNull();
     await user.type(screen.getByLabelText('Email address'), 'chef@example.com');
     await user.type(screen.getByLabelText('Password'), 'my secret');
     await user.click(screen.getByRole('button', { name: 'Sign in' }));
@@ -102,7 +104,7 @@ describe('AuthPage', () => {
     const user = userEvent.setup();
     render(<AuthPage />);
     await user.click(screen.getByRole('button', { name: 'Create an account' }));
-    expect(screen.getByText(/Your Supabase account may also be used by other apps/)).toBeTruthy();
+    expect(screen.getByText(/Accounts belong to the configured Supabase project/)).toBeTruthy();
     await user.type(screen.getByLabelText('Email address'), 'chef@example.com');
     await user.type(screen.getByLabelText('Password', { exact: true }), 'password');
     await user.type(screen.getByLabelText('Confirm password'), 'notthesame');
@@ -122,7 +124,7 @@ describe('AuthPage', () => {
     const user = userEvent.setup();
     render(<AuthPage />);
     await user.click(screen.getByRole('button', { name: 'Forgot password?' }));
-    expect(screen.getByText(/Changing your password affects all apps using this account/)).toBeTruthy();
+    expect(screen.getByText(/If other apps use this same account and project, changing your password affects those apps too/)).toBeTruthy();
     await user.type(screen.getByLabelText('Email address'), 'chef@example.com');
     await user.click(screen.getByRole('button', { name: 'Send reset link' }));
     await waitFor(() => expect(mocks.auth.resetPasswordForEmail).toHaveBeenCalledWith('chef@example.com', { redirectTo: `${window.location.origin}${window.location.pathname}` }));
@@ -135,7 +137,7 @@ describe('AuthPage', () => {
     mocks.auth.updateUser.mockResolvedValueOnce({ error: { message: 'private error' } }).mockResolvedValueOnce({ error: null });
     const user = userEvent.setup();
     render(<AuthPage />);
-    expect(screen.getByText(/Changing your password affects all apps using this account/)).toBeTruthy();
+    expect(screen.getByText(/If other apps use this same account and project, changing your password affects those apps too/)).toBeTruthy();
     await user.type(screen.getByLabelText('New password'), 'newsecret');
     await user.type(screen.getByLabelText('Confirm password'), 'newsecret');
     await user.click(screen.getByRole('button', { name: 'Update password' }));
