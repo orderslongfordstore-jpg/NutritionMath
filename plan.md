@@ -12,6 +12,8 @@ Keep the existing React + TypeScript + Vite single-page app and component struct
 
 Use `src/lib/nutrition.ts` as the calculation core, `src/types.ts` for shared domain types, `src/components/` for workflow screens, `src/lib/` for Auth/data/export helpers, and `src/__tests__/` for unit/regression coverage. Keep `.env.example` limited to public Supabase URL and anon/publishable key placeholders; actual values stay out of Git. Clearly separate an internal draft NIP from a regulatory compliance claim and describe data as session-only until an approved persistence target exists.
 
+Keep the development toolchain on Node 22 with pinned Vite 6.4.6, Vitest 4.1.12 and `@vitejs/plugin-react` 5.2.0; use ESM-aware TypeScript resolution for the Vite config. These upgrades address the initial vulnerable Vite/Vitest paths without force or peer-dependency bypass. The full development audit still reports the upstream `picomatch` repeated-extglob ReDoS advisory (no patched release published as of 18 November 2026); do not suppress or override it with an unverified version. Recheck after upstream publishes a fix. The production-only audit is clean.
+
 ## Design direction
 
 - **Design movement:** A precise food-lab worksheet aesthetic, adapted for small-screen use.

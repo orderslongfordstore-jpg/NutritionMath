@@ -81,13 +81,14 @@
 
 ## 9. Verification and delivery
 
-- [x] `npm ci` completed from the lockfile (18 November 2026).
-- [x] `npx tsc -b --pretty false` passed.
-- [x] `npm test`: 81 tests passed across 17 files.
-- [x] `npm run build` passed. Known warning: lazy-loaded ExcelJS chunk ~938.56 kB minified / 271.04 kB gzip, above Vite's 500 kB warning threshold; review before release.
+- [x] `npm ci` completed from the lockfile using Node 22.23.4/npm 10.9.9 (19 November 2026).
+- [x] `npx tsc -b --pretty false` passed after setting ESM-aware `Bundler` module resolution for the Vite-config TypeScript project.
+- [x] `npm test`: 81 tests passed across 17 files under Vitest 4.1.12.
+- [x] `npm run build` passed under Vite 6.4.6. Known warning: lazy-loaded ExcelJS chunk ~940.19 kB minified / 271.33 kB gzip, above Vite's 500 kB warning threshold; review before release.
 - [x] `npm audit --omit=dev`: 0 production/runtime vulnerabilities.
-- [x] `git diff --check` passed.
-- [x] Prior milestone at `4c343c3454ec06fb4d3581961681eca8bdaf5d08` passed Actions run [43225894268](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/43225894268).
-- [x] Commit/push implementation commit `3c88195c9932b294098b877904d297ae2cc270ef` only to `development/nutritionpro-foundation`; GitHub Actions run [44307322463](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/44307322463) passed.
+- [x] Full `npm audit` run and documented in `DEPENDENCY_AUDIT.md`: five high-severity dependency paths refer to one unpatched `picomatch` GHSA-fc5q-39xc-vjpf in development/test tooling. Upstream lists no patched release; do not hide the finding or use an unverified override.
+- [x] `git diff --check` passed after the current toolchain and documentation updates.
+- [x] Prior implementation commit `3c88195c9932b294098b877904d297ae2cc270ef` passed Actions run [44307322463](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/44307322463). Documentation follow-up `4fe66f57a2ccd6401f1963792820d7a2f33bafdf` passed [run 44307591068](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/44307591068).
+- [ ] Commit/push the verified toolchain and audit documentation only to `development/nutritionpro-foundation`; record its SHA and Actions result.
 - [ ] Do not push to `main`, modify Render, deploy production, connect unapproved Supabase, or alter production data.
 - [ ] Not ready for staging deployment: real Auth/database/RLS, persistence, real curry-sausages product input and process validation, complete FSANZ review and qualified commercial label approval remain outstanding.
