@@ -48,22 +48,33 @@ export function BatchManager({ ingredients, recipes, batches, onSaveBatch }: Bat
   const [discardId, setDiscardId] = useState('');
   const [discardQuantity, setDiscardQuantity] = useState('');
   const [discardedMaterials, setDiscardedMaterials] = useState<RecipeIngredient[]>([]);
+  const retentionNutrients = ['energy', 'protein', 'carbohydrates', 'sugars', 'fat', 'saturatedFat', 'sodium', 'fibre'] as const;
+  const [retentionPercentages, setRetentionPercentages] = useState<Record<(typeof retentionNutrients)[number], string>>({
+    energy: '', protein: '', carbohydrates: '', sugars: '', fat: '', saturatedFat: '', sodium: '', fibre: '',
+  });
+  const [retentionSource, setRetentionSource] = useState('');
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
 
   const selectedVersion = versions.find((version) => version.id === selectedVersionId);
   const materialOptions = useMemo(() => [pureWater, ...ingredients.filter((item) => item.id !== pureWater.id)], [ingredients]);
+  const retentionFactors = Object.fromEntries(retentionNutrients.map((nutrient) => [
+    nutrient,
+    retentionPercentages[nutrient].trim() === '' ? Number.NaN : Number(retentionPercentages[nutrient]) / 100,
+  ])) as Record<(typeof retentionNutrients)[number], number>;
   const preview = useMemo(() => {
     if (!selectedVersion) return null;
     return calculateBatchNutrition({
       recipeVersion: selectedVersion,
       scaleFactor: scaledNumber(scaleFactor),
+      retentionFactors,
+      retentionSource,
       additions,
       discardedMaterials,
       cookedBatchWeightGrams: scaledNumber(cookedWeight),
       portionWeightGrams: scaledNumber(portionWeight),
     });
-  }, [selectedVersion, scaleFactor, additions, discardedMaterials, cookedWeight, portionWeight]);
+  }, [selectedVersion, scaleFactor, retentionPercentages, retentionSource, additions, discardedMaterials, cookedWeight, portionWeight]);
 
   const addMaterial = (role: 'addition' | 'discard') => {
     const ingredientId = role === 'addition' ? additionId : discardId;
@@ -101,6 +112,8 @@ export function BatchManager({ ingredients, recipes, batches, onSaveBatch }: Bat
         recipeVersionId: selectedVersion.id,
         batchCode: batchCode.trim(),
         scaleFactor: scaledNumber(scaleFactor),
+        retentionFactors,
+        retentionSource,
         additions,
         discardedMaterials,
         cookedBatchWeightGrams: scaledNumber(cookedWeight),
@@ -151,6 +164,23 @@ export function BatchManager({ ingredients, recipes, batches, onSaveBatch }: Bat
               <input type="number" min="0.01" max={Number.MAX_SAFE_INTEGER} step="any" inputMode="decimal" value={portionWeight} onChange={(event) => setPortionWeight(event.target.value)} />
             </label>
 
+            <div className="batch-material-form retention-factor-form">
+              <strong>Cooking nutrient retention — explicit, sourced inputs required</strong>
+              <p>No default retention is assumed. Enter all factors from validated process or analytical evidence (0–100%); a value of 100% is an explicit assumption, not an app default. Factors apply after cooking and before nutrients from declared discarded output are subtracted. Until all values and the source/method are entered, batch totals and NIP remain unavailable.</p>
+              <div className="two-column-grid">
+                {retentionNutrients.map((nutrient) => (
+                  <label key={nutrient}>
+                    {nutrient === 'saturatedFat' ? 'Saturated fat' : nutrient[0].toUpperCase() + nutrient.slice(1)} retention (%)
+                    <input type="number" min="0" max="100" step="any" inputMode="decimal" value={retentionPercentages[nutrient]} onChange={(event) => setRetentionPercentages((current) => ({ ...current, [nutrient]: event.target.value }))} />
+                  </label>
+                ))}
+              </div>
+              <label>
+                Retention source / method (required)
+                <input value={retentionSource} maxLength={500} onChange={(event) => setRetentionSource(event.target.value)} placeholder="User-verified process study, laboratory analysis, or other evidence" />
+              </label>
+            </div>
+
             <div className="batch-material-form">
               <strong>Added water or other liquid/material</strong>
               <p>Amounts are per recipe batch and scale with the selected multiplier. Pure water is assumed to contain zero nutrients; use a verified ingredient profile for mineral water, stock, sauces or other liquids.</p>
@@ -197,7 +227,7 @@ export function BatchManager({ ingredients, recipes, batches, onSaveBatch }: Bat
             </div>
 
             <div className="calculation-note" role="note">
-              Nutrient retention is assumed except for declared discarded material. Cooking weight loss/gain is calculated from input weight and the measured cooked weight; it does not change nutrient totals by itself.
+              Missing retention factors are not treated as 100%. Batch nutrition and NIP are blocked until explicit values and their source/method are recorded.
             </div>
             {formError ? <p className="field-error" role="alert">{formError}</p> : null}
             <button type="button" className="primary-button" onClick={saveBatch} disabled={saving || !preview?.isValid || !batchCode.trim()}>
@@ -230,6 +260,7 @@ export function BatchManager({ ingredients, recipes, batches, onSaveBatch }: Bat
                   <strong>{batch.batchCode}</strong>
                   <span>{batch.recipeName} · version {batch.recipeVersion}</span>
                   <span>{batch.calculation.finalFinishedWeightGrams} g finished · {batch.calculation.portions} portions · {batch.calculation.per100g.energy} kJ/100 g</span>
+                  <span>Nutrient retention source: {batch.retentionSource}</span>
                 </article>
               ))}
             </div>

@@ -1,5 +1,14 @@
 import { calculateBatchNutrition } from './batchNutrition';
-import type { BatchCalculationInput, BatchRecord, RecipeIngredient, RecipeVersion, SavedRecipe } from '../types';
+import { calculateMealAssembly } from './mealAssembly';
+import type {
+  BatchCalculationInput,
+  BatchRecord,
+  MealAssemblyInput,
+  MealAssemblyRecord,
+  RecipeIngredient,
+  RecipeVersion,
+  SavedRecipe,
+} from '../types';
 
 export interface SaveRecipeVersionInput {
   name: string;
@@ -24,6 +33,8 @@ export interface NutritionRepository {
   getRecipeVersion(id: string): Promise<RecipeVersion | null>;
   listBatches(recipeVersionId?: string): Promise<BatchRecord[]>;
   createBatch(input: CreateBatchRecordInput): Promise<BatchRecord>;
+  listMealAssemblies(): Promise<MealAssemblyRecord[]>;
+  createMealAssembly(input: MealAssemblyInput): Promise<MealAssemblyRecord>;
 }
 
 function createId(prefix: string): string {
@@ -44,6 +55,8 @@ function cloneRecipeVersion(version: RecipeVersion): RecipeVersion {
 function cloneBatch(batch: BatchRecord): BatchRecord {
   return {
     ...batch,
+    retentionFactors: { ...batch.retentionFactors },
+    recipeIngredients: batch.recipeIngredients.map(cloneRecipeIngredient),
     additions: batch.additions.map(cloneRecipeIngredient),
     discardedMaterials: batch.discardedMaterials.map(cloneRecipeIngredient),
     calculation: {
@@ -56,10 +69,29 @@ function cloneBatch(batch: BatchRecord): BatchRecord {
   };
 }
 
+function cloneMealAssembly(record: MealAssemblyRecord): MealAssemblyRecord {
+  return {
+    ...record,
+    components: record.components.map((component) => ({ ...component })),
+    calculation: {
+      ...record.calculation,
+      componentAllocations: record.calculation.componentAllocations.map((allocation) => ({
+        ...allocation,
+        perPortionNutrients: { ...allocation.perPortionNutrients },
+      })),
+      totalNutrients: { ...record.calculation.totalNutrients },
+      perServing: { ...record.calculation.perServing },
+      per100g: { ...record.calculation.per100g },
+      issues: record.calculation.issues.map((entry) => ({ ...entry })),
+    },
+  };
+}
+
 /** Session-only in-memory adapter. Data is lost when its instance/page is discarded. */
 export class SessionNutritionRepository implements NutritionRepository {
   private readonly recipes = new Map<string, SavedRecipe>();
   private readonly batches: BatchRecord[] = [];
+  private readonly mealAssemblies: MealAssemblyRecord[] = [];
 
   async listRecipes(): Promise<SavedRecipe[]> {
     return Array.from(this.recipes.values(), (recipe) => ({
@@ -137,6 +169,9 @@ export class SessionNutritionRepository implements NutritionRepository {
       batchCode,
       recordedAt: new Date().toISOString(),
       scaleFactor: input.scaleFactor,
+      retentionFactors: { ...input.retentionFactors },
+      retentionSource: input.retentionSource,
+      recipeIngredients: recipeVersion.ingredients.map(cloneRecipeIngredient),
       additions: input.additions.map(cloneRecipeIngredient),
       discardedMaterials: input.discardedMaterials.map(cloneRecipeIngredient),
       cookedBatchWeightGrams: input.cookedBatchWeightGrams,
@@ -145,5 +180,28 @@ export class SessionNutritionRepository implements NutritionRepository {
     };
     this.batches.push(record);
     return cloneBatch(record);
+  }
+
+  async listMealAssemblies(): Promise<MealAssemblyRecord[]> {
+    return this.mealAssemblies.map(cloneMealAssembly);
+  }
+
+  async createMealAssembly(input: MealAssemblyInput): Promise<MealAssemblyRecord> {
+    const mealName = input.mealName.trim();
+    const batchCode = input.batchCode.trim();
+    if (!mealName) throw new Error('Enter a meal name before recording the assembly.');
+    if (!batchCode) throw new Error('Enter a meal batch identification code before recording the assembly.');
+    const calculation = calculateMealAssembly(input.components, this.batches);
+    if (!calculation.isValid) throw new Error(calculation.issues.map((entry) => entry.message).join(' '));
+    const record: MealAssemblyRecord = {
+      id: createId('meal-assembly'),
+      mealName,
+      batchCode,
+      recordedAt: new Date().toISOString(),
+      components: input.components.map((component) => ({ ...component })),
+      calculation,
+    };
+    this.mealAssemblies.push(record);
+    return cloneMealAssembly(record);
   }
 }

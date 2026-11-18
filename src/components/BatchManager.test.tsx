@@ -23,6 +23,9 @@ describe('BatchManager', () => {
     fireEvent.change(screen.getByLabelText('Batch code / identification'), { target: { value: 'MEAL-001' } });
     fireEvent.change(screen.getByLabelText('Measured cooked batch weight before discards (g)'), { target: { value: '90' } });
     fireEvent.change(screen.getByLabelText('Finished portion weight (g)'), { target: { value: '45' } });
+    const retention = { energy: '100', protein: '100', carbohydrates: '100', sugars: '100', fat: '100', 'saturated fat': '100', sodium: '100', fibre: '100' };
+    for (const [nutrient, value] of Object.entries(retention)) fireEvent.change(screen.getByLabelText(`${nutrient[0].toUpperCase()}${nutrient.slice(1)} retention (%)`), { target: { value } });
+    fireEvent.change(screen.getByLabelText('Retention source / method (required)'), { target: { value: 'Test fixture only.' } });
 
     expect(screen.getByText('2 / 0 g')).toBeInTheDocument();
     const saveButton = screen.getByRole('button', { name: 'Save session batch record' });
@@ -33,6 +36,8 @@ describe('BatchManager', () => {
       recipeVersionId: version.id,
       batchCode: 'MEAL-001',
       scaleFactor: 1,
+      retentionFactors: { energy: 1, protein: 1, carbohydrates: 1, sugars: 1, fat: 1, saturatedFat: 1, sodium: 1, fibre: 1 },
+      retentionSource: 'Test fixture only.',
       additions: [],
       discardedMaterials: [],
       cookedBatchWeightGrams: 90,
@@ -40,13 +45,16 @@ describe('BatchManager', () => {
     }));
   });
 
-  it('keeps batch creation disabled until a recipe version and valid measured weights are supplied', () => {
+  it('keeps batch creation disabled until a recipe, measured weights and sourced retention factors are supplied', () => {
     renderManager();
     expect(screen.getByRole('button', { name: 'Save session batch record' })).toBeDisabled();
     fireEvent.change(screen.getByLabelText('Recipe version'), { target: { value: version.id } });
     fireEvent.change(screen.getByLabelText('Batch code / identification'), { target: { value: 'MEAL-002' } });
     fireEvent.change(screen.getByLabelText('Measured cooked batch weight before discards (g)'), { target: { value: '0' } });
     fireEvent.change(screen.getByLabelText('Finished portion weight (g)'), { target: { value: '40' } });
+    expect(screen.getByRole('button', { name: 'Save session batch record' })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Energy retention (%)'), { target: { value: '100' } });
+    fireEvent.change(screen.getByLabelText('Retention source / method (required)'), { target: { value: 'Explicit source' } });
     expect(screen.getByRole('button', { name: 'Save session batch record' })).toBeDisabled();
   });
 });

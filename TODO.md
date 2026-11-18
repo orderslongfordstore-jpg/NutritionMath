@@ -1,101 +1,93 @@
 # NutritionPro Outcomes
 
-## 1. Calculation correctness and regression coverage — complete for the current prototype
+## 1. Calculation engine and regression coverage
 
-- [x] Resolve the original non-finite and overflow reporting defects without weakening existing tests.
-- [x] Validate NaN, positive/negative Infinity, negative and zero quantities, missing/invalid nutrient values, invalid serving counts, oversized values, zero recipe weight and accumulated overflow.
-- [x] Report invalid or unrepresentable inputs instead of presenting fallback values as valid results; keep returned values finite.
-- [x] Retain the existing calculation engine and regression coverage; 19 calculation tests pass.
-- [x] Suppress recipe summary totals while a draft is invalid or incomplete.
-- [ ] Obtain domain review of calculation assumptions, recipe yield behavior and regulatory requirements before label use.
+- [x] Preserve the existing recipe calculation API and guard non-finite, negative, zero, missing and overflow cases.
+- [x] Report invalid inputs rather than displaying fallback results as valid.
+- [x] Add measured cooked-yield, loss/gain, discard and portion calculations without treating raw weight as cooked yield.
+- [x] Require a user-sourced retention factor for each of eight nutrients; leave all fields blank by default, reject missing/out-of-range factors and missing source/method, and do not assume 100% retention.
+- [x] Apply explicit post-cooking factors before subtracting nutrient values recorded for measured discarded output; record factors/source with the session batch and include them in label-review output.
+- [x] Test explicit non-100% retention, missing values, missing source, measured discard, scaling, portions, AFCD-based calculation and combined-meal arithmetic.
+- [ ] Obtain independent food-process/dietitian review of the retention model and its assumed order relative to process loss/discard before commercial use; this model is user-input infrastructure, not validated science.
 
-## 2. Ingredient management — partial; session-local
+## 2. Ingredient records and source provenance — prototype, session-only
 
-- [x] Create, edit, delete and search ingredient records in current browser memory.
-- [x] Capture per-100-g energy (kJ), protein, carbohydrate, sugars, fat, saturated fat, sodium, fibre, serving size and allergen information with finite/non-negative validation.
-- [x] Remove fictional preloaded ingredients and show an honest empty state.
-- [x] Export current in-memory ingredients as CSV with formula-injection hardening.
-- [x] Export current in-memory ingredients as a genuine `.xlsx` workbook.
-- [ ] Add user-entered category and source/provenance fields without imposing an unverified remote schema.
-- [ ] Persist ingredients to a separately confirmed non-production Supabase project with database-enforced ownership; none is approved.
-- [ ] Confirm the original schema's supported fields before mapping local records to remote tables.
+- [x] Create, edit, delete, search and export session-local ingredient records with per-100-g nutrients, serving size and allergens.
+- [x] Record category, brand, product code/SKU, barcode, source type, source reference, safe HTTP(S) source URL and verification status.
+- [x] Reject unsafe ingredient source URLs and render source links only for safe HTTP(S) URLs without embedded credentials.
+- [x] Provide an offline four-profile AFCD Release 3 reference subset with food IDs, per-100-g values, source references and direct FSANZ data-files link.
+- [x] Distinguish AFCD generic values from manufacturer-label data; do not claim AFCD profiles represent branded products or imply an empty allergen field means allergen absence.
+- [x] Include AFCD-required attribution, changes, limitation, Australian-data, as-is warranty notice and licence URL in the catalog and AFCD-containing ingredient CSV/XLSX output; document the scope of the CC BY-SA 3.0 Australia terms in `AFCD_DATA_LICENSE_NOTICE.md`.
+- [x] Accept g or kg in recipe mass input and convert with an exact shared helper. Unsupported kitchen units and volume-to-mass conversion remain unresolved without measured mass/density.
+- [ ] Add an AFCD/manufacturer data import route only with correct source, licence and SKU verification; the current AFCD catalog is a small offline sample, not a full database or barcode lookup.
+- [ ] Persist ingredient data only after a separate staging Supabase project and schema/ownership model are explicitly approved.
 
-## 3. Recipe builder and batch calculations — functional prototype; session-only
+## 3. Curry-sausages-and-mash validation case
 
-- [x] Add/remove ingredient lines, enter gram quantities, set servings and calculate draft totals per serving and per 100 g.
-- [x] Propagate ingredient edits to current draft references and remove deleted ingredients from the unsaved recipe.
-- [x] Export a recipe calculation workbook and an internal recipe PDF worksheet using the current nutrition engine.
-- [x] Mark worksheet exports clearly as internal drafts, not a validated FSANZ NIP or label.
-- [x] Create named recipes and immutable versions; load an exact version snapshot for batch calculation.
-- [x] Create session-only batch records linked to their exact recipe version and identification code.
-- [x] Scale recipe ingredients, added materials and discarded materials by a positive batch scale factor.
-- [x] Require measured cooked batch weight before discards and calculate final finished weight, cooking loss/gain, portion count, remainder, per-100-g and per-portion nutrients.
-- [x] Permit recorded added water and other material profiles; require discarded output quantities and a profile representing the discarded output.
-- [ ] Replace the current assumed nutrient retention (except declared discards) with an approved process-specific model where justified; current batch math does not apply AFCD retention factors.
-- [ ] Persist recipes/batches after an approved staging project and its actual schema/ownership model are available.
+- [x] Add an editable session-only case using only supplied facts: 7.2 kg sausages; 2 kg onions; 2 kg carrots; one bunch celery; 1 kg peas and corn; 100 g Keen's curry powder; garlic unspecified; 160 g MAGGI chicken stock; 8 L water; 4 tablespoons fruit chutney; 3 cups cornflour; and Farm Frites mashed potato with no supplied amount/SKU.
+- [x] Display the computed known g/kg subtotal of 12,460 g. Keep the subtotal explicitly incomplete; it excludes the unresolved celery bunch, garlic, 8 L water, kitchen measures and mash.
+- [x] Allow quantity, unit, source note, product reference and source URL edits. Do not guess tablespoon/cup/bunch masses, peas/corn split, product label values or mash yield.
+- [x] Record the supplied plated portion: 400 g curry + 200 g mash = 600 g total.
+- [ ] Obtain actual product/pack identities and nutrient labels; weigh unresolved recipe inputs; independently measure cooked curry and finished mash yields and source process-specific retention factors before calculating the real product NIP or serving count.
+- [ ] No real curry/mash nutrition, cooking yield, ingredient order, cost or commercial label is claimed by the synthetic AFCD regressions.
 
-## 4. Australian Nutrition Information Panels — draft implementation; not a compliance determination
+## 4. Recipes, production batches and meal assembly — session-only
 
-- [x] Generate a batch-linked solid-food draft panel in ordinary Schedule 12 row order: Energy, Protein, Fat total (Saturated sub-row), Carbohydrate (Sugars sub-row), Sodium; include Dietary fibre only when explicitly marked applicable.
-- [x] Show average quantities per serving and per 100 g with kJ, g and mg labels, serving size and servings per package; calculate both quantities from the measured final finished weight and full-precision batch nutrient totals.
-- [x] Display at no more than three significant figures using an explicit software rounding convention, keeping the legal significant-figure maximum separate from software-specific decimal/tie-breaking choices.
-- [x] Require finite positive finished yield, portion weight and package serving count; reject missing or non-finite nutrient values for every displayed row.
-- [x] Permanently mark output “DRAFT — NOT REVIEWED OR APPROVED FOR COMMERCIAL USE”; no FSANZ compliance determination is claimed.
-- [ ] Add and verify product/claim-specific triggered nutrients, fibre’s special required-zero treatment when applicable and permitted “LESS THAN” alternatives; current panel only has the base rows and optional fibre.
-- [ ] Verify additional schedule exceptions, liquid product panels, unit/format detail and product classification against the full current Code before production use.
+- [x] Add/edit recipe ingredients in g/kg and servings; save immutable named recipe versions and load exact snapshots for batch work.
+- [x] Create batch records linked to exact recipe version and batch identification; scale formula/additions/discards; require measured cooked and portion weights.
+- [x] Record raw input mass, added materials, measured cooked weight, declared measured discard, final finished weight, weight loss/gain, portion count, remainder, per-100-g and per-serving totals.
+- [x] Require a nutrient profile for each measured discarded output; the profile must represent the discard, not automatically the uncooked food.
+- [x] Combine separate measured cooked batches by declared plated component weights; calculate component allocations, limiting finished meal yield, leftovers, serving weight and combined NIP inputs.
+- [ ] Improve process-specific model only with independently reviewed data for nutrient changes and process loss; all factors entered in the current prototype are assumptions supplied by the operator and are not independently validated.
+- [ ] Persist recipes, batches and combined meals after a separately approved staging project exists.
 
-## 5. Food labels and exports — printable review draft; partial
+## 5. Australian NIP draft — not a compliance determination
 
-- [x] Print a session-only draft linked to an exact saved recipe-version batch, with product name, user-entered ingredient declaration, user-entered mandatory allergen wording, optional separate precautionary wording, draft NIP, serving information, storage directions, batch code, and user-entered best-before/use-by text.
-- [x] Keep declarations and date/storage facts user-supplied; display warnings against nutrient-based allergen inference and auto-generated legal text.
-- [x] Require explicit user confirmations for ingredient, allergen and date/storage fact review before enabling print; permanently label the output draft and state that printing is not approval.
-- [x] Harden CSV cell escaping against spreadsheet formula injection.
-- [x] Provide a browser XLSX workbook for current ingredient data.
-- [x] Provide browser XLSX and PDF outputs for an internal recipe calculation worksheet.
-- [ ] Add final artwork review/approval and verified legal layout, bold/contrast, claims, address, lot/date-format, packaging-specific and product-specific compliance checks; these are not implemented by the draft print workflow.
-- [ ] Add workbook/PDF reports for NIPs and batches and ingredient PDF output.
-- [ ] Preserve units, source data, calculation review state and export provenance in generated outputs.
+- [x] Generate a batch-linked solid-food draft NIP in ordinary nutrient order with per-serving and per-100-g quantities, units, serving size and servings/package.
+- [x] Use full-precision aggregate nutrition inputs and explicit software display rounding to no more than three significant figures.
+- [x] Include fibre only if the user explicitly marks it applicable; never infer allergen status or legal claim triggers from nutrients.
+- [x] Support a combined plated meal's NIP from the separate component-batch calculations, not only an individual component.
+- [x] Display persistent draft/not-approved warnings in app, print preview, PDF and XLSX.
+- [ ] Implement and independently verify all claim-specific nutrients, fibre special cases, `<` rules, Schedule 12 exceptions, liquid formats, food classification and current Code presentation provisions before commercial use.
+- [ ] Verify all user-entered factors, ingredient panels, final yields, declared servings and product claims against actual product records.
 
-## 6. Supabase authentication, persistence and database security — client code present; remote verification blocked
+## 6. Food-label draft and export — review draft only
 
-- [x] Implement email/password sign-in and sign-up, PKCE session restoration, sign-out, password recovery and password update calls with `@supabase/supabase-js`.
-- [x] Persist Auth sessions in the browser client; this Vite SPA does not currently use `@supabase/ssr` or HttpOnly cookie sessions.
-- [x] Keep account forms disabled when no public Supabase config is present; `.env.example` contains blank placeholders.
-- [x] Require authenticated sessions for ingredient, recipe and label tabs whenever a public Supabase client is configured; if Supabase is entirely unconfigured, require an explicit local-only choice and show a persistent warning that page-session data is not authenticated, synced or durable.
-- [x] Use only the public URL and anon/publishable key in the browser client; no service-role key is included.
-- [x] Add mocked tests for sign-in, registration, recovery, password update, session restoration and sign-out. These tests do not prove real Auth behavior.
-- [ ] Verify real registration, login, recovery, persistent sessions and callback redirects using a separately approved non-production project.
-- [ ] Connect authenticated users to persisted records using that approved project's actual schema or reviewed additive migrations.
-- [ ] Validate user/workspace ownership with RLS and explicit negative cross-user access tests.
-- [ ] Do not modify the production Supabase project or data. The user explicitly rejected `NutrientsMath` (`ndvjrsegapfhnhrjypck`); do not connect to it, change its schema or create accounts there. No separate staging project is approved.
+- [x] Capture product name, supplier business name/address, SKU/barcode, production date, linked batch/meal, ingredient declaration, allergen wording, precautionary wording, storage text, date-mark type/text, servings/package and fibre applicability.
+- [x] Suggest ingredient order only when formula lines are complete, there are no declared discards, every profile is non-AFCD/non-estimate, user-verified and has a source reference. Require the user to explicitly insert the suggestion; never auto-write a legal declaration.
+- [x] Require explicit user review confirmations for the ingredient list, allergen text, storage and date mark before print. These confirmations do not constitute approval.
+- [x] Provide working client-side label PDF and XLSX exports, with draft watermark, source/retention evidence, NIP when valid, and missing-data notices.
+- [x] Provide ingredient XLSX/CSV and recipe calculation XLSX/PDF; harden spreadsheet text against formula injection.
+- [ ] Validate actual descending ingoing weights for compound ingredients, processing aids, additives, water/reconstitution, cooking losses and all Code rules with a qualified label reviewer.
+- [ ] Complete commercial artwork and product-specific checks including mandatory identifiers/contact fields, date-mark decision, lot/traceability, claims, allergens, country-of-origin and packaging/layout requirements.
+- [ ] No generated label is approved, verified compliant or authorized for sale.
 
-## 7. Interface and mobile experience — foundation present; full product not complete
+## 7. Authentication, data persistence and security — remote verification blocked
 
-- [x] Keep the product name NutritionPro and apply the requested black, white and yellow identity with responsive navigation and clear empty/review states.
-- [x] Historically smoke-test the local app at 390×844 for dashboard, ingredient CRUD/search and recipe calculation without page-level horizontal overflow.
-- [x] Keep configured Supabase projects behind authentication; present a clearly disclosed explicit session-only workspace only when there is no Supabase configuration.
-- [ ] Repeat iPhone/mobile smoke tests after the latest export controls and when authenticated/data-backed screens are available.
-- [ ] Complete missing persistent product workflows while preserving verified behavior from original source when available.
-- [ ] Verify additional iPhone/tablet/desktop breakpoints and accessibility against final authenticated screens.
+- [x] Implement native Supabase JS email/password registration/login, PKCE, browser-session restore, sign-out, recovery and password update; mocked tests only.
+- [x] Keep the client fail-closed when Supabase config is absent; provide explicit local-only access only if no valid public client is configured, with a non-authenticated/non-durable page-session warning. Require Auth when a public Supabase project is configured.
+- [x] Keep browser config limited to public URL and anon/publishable key; no service-role key in frontend.
+- [x] Key the in-memory workspace by authenticated user ID so identity changes synchronously discard previous session records; verify with an App-level account-switch regression.
+- [ ] Verify real Auth, session restoration, recovery redirects, ownership and database I/O only against a separately approved non-production Supabase project.
+- [ ] Confirm actual schema and RLS, implement authenticated persistence and cross-user negative tests.
+- [ ] Do not use/modify production Supabase `nfzsjmzpiweeqtkypcgn` or the explicitly rejected `ndvjrsegapfhnhrjypck`. No staging Supabase project is approved.
 
-## 8. Quality assurance and deployment preparation — current branch CI passes; remote/database checks pending
+## 8. User interface
 
-- [x] Prior XLSX/PDF milestone passed `npm test`: 32 tests across 7 files.
-- [x] Run `npm ci`, `npx tsc -b --pretty false`, `npm test`, `npm run build`, `npm audit --omit=dev` and `git diff --check` on 13 November 2026.
-- [x] Final AFCD/batch/NIP/label/local-only mode milestone passed 55 tests across 12 files after the UI change.
-- [x] Final TypeScript/Vite production build passed; the build emits the known ExcelJS chunk warning, approximately 939 kB minified / 271 kB gzip.
-- [x] Run `npm audit --omit=dev`: zero production/runtime vulnerabilities after pinning ExcelJS's `uuid` dependency to patched `11.1.1`.
-- [x] Run `git diff --check` before the export milestone commit.
-- [x] GitHub Actions passed for Auth milestone `d2950e293b0386585bd4a35d1d23e28a48ff9c7a` (run [43114463371](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/43114463371)) and XLSX/PDF milestone `aaa1bccbae41438e86edbdd620530038e5525cda` (run [43116172481](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/43116172481)).
-- [x] Current recipe/batch/NIP/label milestone `4c343c3454ec06fb4d3581961681eca8bdaf5d08` passed GitHub Actions run [43225894268](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/43225894268).
-- [ ] Validate real Auth, database migrations, RLS boundaries and server logs in an approved non-production environment.
-- [ ] Document exact staging/production environment variables only after the integration plan and tests are reviewed; do not change production configuration or deploy without approval.
+- [x] Keep the NutritionPro black/white/yellow brand and mobile-first responsive controls, with explicit warnings, units and disabled invalid actions.
+- [x] Keep data, recipes, batches, assemblies and label draft in the current session only; no cross-reload or cross-user persistence claim.
+- [ ] Repeat physical iPhone-width smoke tests for the latest label exports, provenance fields, combined meal and retention-entry form.
+- [ ] Complete accessibility and final authenticated workflows after approved staging integration.
 
-## 9. Branch, commit and delivery — active development only
+## 9. Verification and delivery
 
-- [x] Work only on `development/nutritionpro-foundation`; do not push development work to `main`.
-- [x] Commit and push the native Auth milestone (`d2950e2`) and browser XLSX/PDF milestone (`aaa1bcc`) to the development branch; both GitHub Actions runs passed.
-- [x] Update this checklist and the feature-preservation report for the current development state.
-- [x] Commit and push the verified current milestone only to `development/nutritionpro-foundation`; commit `4c343c3454ec06fb4d3581961681eca8bdaf5d08`; its exact Actions run passed.
-- [ ] Continue only with work that does not require unapproved Supabase access; wait for explicit staging-project approval before integration.
-- [ ] Final handoff must distinguish source facts, locally/mock-tested behavior, unverified remote integrations, current branch/commit, test results and the absence of any production deployment.
+- [x] `npm ci` completed from the lockfile (18 November 2026).
+- [x] `npx tsc -b --pretty false` passed.
+- [x] `npm test`: 81 tests passed across 17 files.
+- [x] `npm run build` passed. Known warning: lazy-loaded ExcelJS chunk ~938.56 kB minified / 271.04 kB gzip, above Vite's 500 kB warning threshold; review before release.
+- [x] `npm audit --omit=dev`: 0 production/runtime vulnerabilities.
+- [x] `git diff --check` passed.
+- [x] Prior milestone at `4c343c3454ec06fb4d3581961681eca8bdaf5d08` passed Actions run [43225894268](https://github.com/orderslongfordstore-jpg/NutritionMath/actions/runs/43225894268).
+- [ ] Commit/push the current implementation and documentation only to `development/nutritionpro-foundation`; record the exact new commit SHA and actual CI run.
+- [ ] Do not push to `main`, modify Render, deploy production, connect unapproved Supabase, or alter production data.
+- [ ] Not ready for staging deployment: real Auth/database/RLS, persistence, real curry-sausages product input and process validation, complete FSANZ review and qualified commercial label approval remain outstanding.

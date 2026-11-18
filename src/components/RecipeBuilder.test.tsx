@@ -10,7 +10,6 @@ const sampleRecipeLines: RecipeIngredient[] = [
   { ingredient, quantity: 400 },
   { ingredient: rice, quantity: 200 },
 ];
-
 const savedVersion: RecipeVersion = {
   id: 'recipe-version-1', recipeId: 'recipe-1', name: 'Chicken and rice meal', version: 1,
   ingredients: sampleRecipeLines, servings: 2, createdAt: '2026-11-12T00:00:00.000Z',
@@ -50,7 +49,6 @@ describe('RecipeBuilder export controls', () => {
     const { onExportXlsx, onExportPdf } = renderBuilder();
     const xlsxButton = screen.getByRole('button', { name: 'Export recipe worksheet' });
     const pdfButton = screen.getByRole('button', { name: 'Export PDF worksheet' });
-
     expect(xlsxButton).toBeEnabled();
     expect(pdfButton).toBeEnabled();
     fireEvent.click(xlsxButton);
@@ -73,8 +71,23 @@ describe('RecipeBuilder version controls', () => {
     expect(saveButton).toBeEnabled();
     fireEvent.click(saveButton);
     expect(onSaveRecipeVersion).toHaveBeenCalledOnce();
-
     fireEvent.change(screen.getByLabelText('Load saved recipe version'), { target: { value: savedVersion.id } });
     expect(onLoadRecipeVersion).toHaveBeenCalledWith(savedVersion);
+  });
+
+  it('converts an entered kg amount to grams before calling the existing recipe handler', () => {
+    const onAddRecipeItem = vi.fn();
+    render(
+      <RecipeBuilder
+        ingredients={[ingredient]} recipeIngredients={[]} servings="1" onServingsChange={vi.fn()}
+        onAddRecipeItem={onAddRecipeItem} onRecipeChange={vi.fn()} onExportXlsx={vi.fn()} onExportPdf={vi.fn()}
+        exporting={false} recipeName="Chicken recipe" currentRecipeId={null} currentRecipeVersion={null}
+        savedRecipes={[savedRecipe]} onRecipeNameChange={vi.fn()} onSaveRecipeVersion={vi.fn()} onLoadRecipeVersion={vi.fn()}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText('Ingredient quantity'), { target: { value: '7.2' } });
+    fireEvent.change(screen.getByLabelText('Mass unit'), { target: { value: 'kg' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add ingredient' }));
+    expect(onAddRecipeItem).toHaveBeenCalledWith(ingredient, 7200);
   });
 });

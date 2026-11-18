@@ -3,14 +3,20 @@ import { AuthPanel } from './components/AuthPanel';
 import { BatchManager } from './components/BatchManager';
 import { IngredientManager } from './components/IngredientManager';
 import { createEmptyFoodLabelDraft, LabelBuilder } from './components/LabelBuilder';
+import { MealAssembler } from './components/MealAssembler';
+import { createCurryMashDraft, CurryMashCase, type CurryMashDraft } from './components/CurryMashCase';
 import { OverviewCards } from './components/OverviewCards';
 import { RecipeBuilder } from './components/RecipeBuilder';
 import { SectionCard } from './components/SectionCard';
 import { Topbar } from './components/Topbar';
 import { calculateRecipeTotals, roundToTwo } from './lib/nutrition';
 import { downloadIngredientsXlsx, downloadRecipePdf, downloadRecipeXlsx } from './lib/exports';
+import { AFCD_REFERENCE_CATALOG } from './lib/afcdCatalog';
+import { AFCD_DISTRIBUTION_NOTICE } from './lib/afcdLicense';
+import { calculateDraftNip } from './lib/fsanzNip';
+import { downloadFoodLabelPdf, downloadFoodLabelXlsx } from './lib/labelExports';
 import { SessionNutritionRepository } from './lib/nutritionRepository';
-import type { Ingredient, RecipeIngredient, RecipeVersion, SavedRecipe, BatchRecord } from './types';
+import type { Ingredient, MealAssemblyInput, MealAssemblyRecord, RecipeIngredient, RecipeVersion, SavedRecipe, BatchRecord } from './types';
 import { useAuth } from './context/AuthContext';
 
 type Tab = 'dashboard' | 'ingredients' | 'recipes' | 'accounts' | 'labels';
@@ -22,11 +28,19 @@ function csvCell(value: string | number): string {
 }
 
 function App() {
+  const { configured, user } = useAuth();
+  const workspaceKey = configured ? (user?.id ?? 'signed-out') : 'local-only';
+  return <AppWorkspace key={workspaceKey} />;
+}
+
+function AppWorkspace() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [recipeIngredients, setRecipeIngredients] = useState<RecipeIngredient[]>([]);
   const [repository] = useState(() => new SessionNutritionRepository());
   const [savedRecipes, setSavedRecipes] = useState<SavedRecipe[]>([]);
   const [batches, setBatches] = useState<BatchRecord[]>([]);
+  const [mealAssemblies, setMealAssemblies] = useState<MealAssemblyRecord[]>([]);
+  const [curryMashDraft, setCurryMashDraft] = useState<CurryMashDraft>(createCurryMashDraft);
   const [labelDraft, setLabelDraft] = useState(createEmptyFoodLabelDraft);
   const [recipeName, setRecipeName] = useState('');
   const [currentRecipeId, setCurrentRecipeId] = useState<string | null>(null);
@@ -112,6 +126,12 @@ function App() {
     setStatusMessage(`Batch ${record.batchCode} saved for “${record.recipeName}” version ${record.recipeVersion} in this page session only.`);
   };
 
+  const handleSaveMealAssembly = async (input: MealAssemblyInput) => {
+    const record = await repository.createMealAssembly(input);
+    setMealAssemblies(await repository.listMealAssemblies());
+    setStatusMessage(`Combined meal ${record.batchCode} saved in this page session only; component batch records remain separate.`);
+  };
+
   const handleExportCsv = () => {
     if (ingredients.length === 0) {
       setStatusMessage('There are no ingredient records to export.');
@@ -119,12 +139,19 @@ function App() {
     }
 
     const header = [
-      'Ingredient', 'Energy (kJ/100 g)', 'Protein (g/100 g)', 'Carbohydrate (g/100 g)',
+      'Ingredient', 'Category', 'Brand', 'Product identifier / SKU', 'Barcode', 'Origin',
+      'Energy (kJ/100 g)', 'Protein (g/100 g)', 'Carbohydrate (g/100 g)',
       'Sugars (g/100 g)', 'Fat (g/100 g)', 'Saturated fat (g/100 g)',
       'Sodium (mg/100 g)', 'Fibre (g/100 g)', 'Serving size (g)', 'Allergens',
+      'Nutrient source type', 'Source status', 'Source reference', 'Source URL', 'AFCD data licence notice',
     ];
     const rows = ingredients.map((ingredient) => [
       ingredient.name,
+      ingredient.category ?? '',
+      ingredient.brand ?? '',
+      ingredient.code ?? '',
+      ingredient.barcode ?? '',
+      ingredient.origin ?? '',
       String(roundToTwo(ingredient.energy)),
       String(roundToTwo(ingredient.protein)),
       String(roundToTwo(ingredient.carbohydrates)),
@@ -135,6 +162,11 @@ function App() {
       String(roundToTwo(ingredient.fibre)),
       String(roundToTwo(ingredient.servingSize)),
       ingredient.allergens.join('; '),
+      ingredient.sourceType ?? 'manual',
+      ingredient.sourceStatus ?? 'unverified',
+      ingredient.sourceReference ?? '',
+      ingredient.sourceUrl ?? '',
+      ingredient.sourceType === 'afcd' ? AFCD_DISTRIBUTION_NOTICE : '',
     ]);
     const csv = [header, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n');
     const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
@@ -200,6 +232,64 @@ function App() {
     }
   };
 
+  const getLabelExportData = () => {
+    const batch = batches.find((record) => `batch:${record.id}` === labelDraft.batchRecordId);
+    const meal = mealAssemblies.find((record) => `meal:${record.id}` === labelDraft.batchRecordId);
+    const source = batch
+      ? { name: batch.recipeName, code: batch.batchCode, finalWeight: batch.calculation.finalFinishedWeightGrams, portion: batch.portionWeightGrams, totals: batch.calculation.totalNutrients, valid: batch.calculation.isValid }
+      : meal
+        ? { name: meal.mealName, code: meal.batchCode, finalWeight: meal.calculation.finishedMealWeightGrams, portion: meal.calculation.servingWeightGrams, totals: meal.calculation.totalNutrients, valid: meal.calculation.isValid }
+        : null;
+    const nip = source?.valid ? calculateDraftNip({
+      totalNutrients: source.totals,
+      finalFinishedWeightGrams: source.finalWeight,
+      servingWeightGrams: source.portion,
+      servingsPerPackage: labelDraft.servingsPerPackage.trim() ? Number(labelDraft.servingsPerPackage) : Number.NaN,
+      includeDietaryFibre: labelDraft.includeDietaryFibre,
+    }) : null;
+    const sourceBatches = batch ? [batch] : meal ? meal.components.map((component) => batches.find((record) => record.id === component.batchRecordId)).filter((record): record is BatchRecord => Boolean(record)) : [];
+    const afcdUsed = sourceBatches.some((record) => [...record.recipeIngredients, ...record.additions].some((entry) => entry.ingredient.sourceType === 'afcd'));
+    const retentionEvidence = sourceBatches.map((record) => {
+      const factors = Object.entries(record.retentionFactors).map(([nutrient, factor]) => `${nutrient} ${typeof factor === 'number' ? `${factor * 100}%` : 'missing'}`).join(', ');
+      return `${record.batchCode}: ${factors}. Source/method: ${record.retentionSource}`;
+    }).join(' | ');
+    return {
+      ...labelDraft,
+      batchCode: source?.code ?? '',
+      recordName: source?.name ?? '',
+      servingSizeGrams: source?.portion ?? null,
+      retentionEvidence,
+      nip,
+      afcdUsed,
+    };
+  };
+
+  const handleExportLabelPdf = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      await downloadFoodLabelPdf(getLabelExportData());
+      setStatusMessage('Label draft PDF exported. It remains an unapproved draft, not a compliance determination.');
+    } catch {
+      setStatusMessage('The label draft PDF could not be created.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportLabelXlsx = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      await downloadFoodLabelXlsx(getLabelExportData());
+      setStatusMessage('Label draft XLSX exported. It remains an unapproved draft, not a compliance determination.');
+    } catch {
+      setStatusMessage('The label draft XLSX could not be created.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const renderActiveSection = () => {
     const requiresAuth = selectedTab === 'ingredients' || selectedTab === 'recipes' || selectedTab === 'labels';
     if (requiresAuth && authLoading) {
@@ -248,11 +338,13 @@ function App() {
             onExportCsv={handleExportCsv}
             onExportXlsx={handleExportIngredientsXlsx}
             exporting={isExporting}
+            referenceIngredients={AFCD_REFERENCE_CATALOG}
           />
         );
       case 'recipes':
         return (
           <>
+            <CurryMashCase draft={curryMashDraft} onDraftChange={setCurryMashDraft} />
             <RecipeBuilder
               ingredients={ingredients}
               recipeIngredients={recipeIngredients}
@@ -272,6 +364,7 @@ function App() {
               onLoadRecipeVersion={handleLoadRecipeVersion}
             />
             <BatchManager ingredients={ingredients} recipes={savedRecipes} batches={batches} onSaveBatch={handleSaveBatch} />
+            <MealAssembler batches={batches} records={mealAssemblies} onSave={handleSaveMealAssembly} />
           </>
         );
       case 'accounts':
@@ -280,8 +373,12 @@ function App() {
         return (
           <LabelBuilder
             batches={batches}
+            mealAssemblies={mealAssemblies}
             draft={labelDraft}
             onDraftChange={setLabelDraft}
+            onExportPdf={handleExportLabelPdf}
+            onExportXlsx={handleExportLabelXlsx}
+            exporting={isExporting}
             onPrintDraft={() => {
               setStatusMessage('Printing a session-only label draft for review. It is not approved for commercial use.');
               window.print();

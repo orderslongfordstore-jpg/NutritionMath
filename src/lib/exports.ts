@@ -1,5 +1,6 @@
 import { calculateIngredientNutrition, calculateRecipeTotals, roundToTwo } from './nutrition';
 import type { Ingredient, RecipeIngredient } from '../types';
+import { AFCD_ATTRIBUTION, AFCD_AUSTRALIAN_DATA_NOTICE, AFCD_CHANGE_NOTICE, AFCD_DISTRIBUTION_NOTICE, AFCD_LICENSE_URI, AFCD_LIMITATION_STATEMENT, AFCD_WARRANTY_DISCLAIMER } from './afcdLicense';
 
 const xlsxMimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
@@ -20,8 +21,10 @@ export async function createIngredientsWorkbook(ingredients: Ingredient[]) {
   const worksheet = workbook.addWorksheet('Ingredients');
   worksheet.columns = [
     { header: 'Ingredient', key: 'name', width: 30 },
+    { header: 'Category', key: 'category', width: 22 },
     { header: 'Code', key: 'code', width: 18 },
     { header: 'Brand', key: 'brand', width: 24 },
+    { header: 'Barcode', key: 'barcode', width: 18 },
     { header: 'Origin', key: 'origin', width: 20 },
     { header: 'Energy (kJ/100 g)', key: 'energy', width: 20 },
     { header: 'Protein (g/100 g)', key: 'protein', width: 20 },
@@ -33,12 +36,19 @@ export async function createIngredientsWorkbook(ingredients: Ingredient[]) {
     { header: 'Fibre (g/100 g)', key: 'fibre', width: 18 },
     { header: 'Serving size (g)', key: 'servingSize', width: 18 },
     { header: 'Allergens', key: 'allergens', width: 35 },
+    { header: 'Nutrient source type', key: 'sourceType', width: 24 },
+    { header: 'Source status', key: 'sourceStatus', width: 20 },
+    { header: 'Source reference', key: 'sourceReference', width: 55 },
+    { header: 'Source URL', key: 'sourceUrl', width: 55 },
+    { header: 'AFCD licence notice', key: 'afcdNotice', width: 70 },
   ];
   for (const ingredient of ingredients) {
     worksheet.addRow({
       name: safeSpreadsheetText(ingredient.name),
+      category: safeSpreadsheetText(ingredient.category),
       code: safeSpreadsheetText(ingredient.code),
       brand: safeSpreadsheetText(ingredient.brand),
+      barcode: safeSpreadsheetText(ingredient.barcode),
       origin: safeSpreadsheetText(ingredient.origin),
       energy: roundToTwo(ingredient.energy),
       protein: roundToTwo(ingredient.protein),
@@ -50,14 +60,31 @@ export async function createIngredientsWorkbook(ingredients: Ingredient[]) {
       fibre: roundToTwo(ingredient.fibre),
       servingSize: roundToTwo(ingredient.servingSize),
       allergens: safeSpreadsheetText(ingredient.allergens.join('; ')),
+      sourceType: safeSpreadsheetText(ingredient.sourceType),
+      sourceStatus: safeSpreadsheetText(ingredient.sourceStatus),
+      sourceReference: safeSpreadsheetText(ingredient.sourceReference),
+      sourceUrl: safeSpreadsheetText(ingredient.sourceUrl),
+      afcdNotice: ingredient.sourceType === 'afcd' ? safeSpreadsheetText(AFCD_DISTRIBUTION_NOTICE) : '',
     });
   }
   worksheet.getRow(1).font = { bold: true };
   worksheet.views = [{ state: 'frozen', ySplit: 1 }];
   worksheet.autoFilter = {
     from: 'A1',
-    to: `N${Math.max(1, ingredients.length + 1)}`,
+    to: `U${Math.max(1, ingredients.length + 1)}`,
   };
+  if (ingredients.some((ingredient) => ingredient.sourceType === 'afcd')) {
+    const notice = workbook.addWorksheet('AFCD Licence and Use');
+    notice.columns = [{ header: 'AFCD attribution and required licence notice', key: 'notice', width: 120 }];
+    notice.addRow({ notice: AFCD_ATTRIBUTION });
+    notice.addRow({ notice: AFCD_CHANGE_NOTICE });
+    notice.addRow({ notice: AFCD_AUSTRALIAN_DATA_NOTICE });
+    notice.addRow({ notice: AFCD_LIMITATION_STATEMENT });
+    notice.addRow({ notice: AFCD_WARRANTY_DISCLAIMER });
+    notice.addRow({ notice: `AFCD Data User Licence Agreement: ${AFCD_LICENSE_URI}` });
+    notice.getColumn(1).alignment = { wrapText: true, vertical: 'top' };
+    notice.getColumn(1).width = 120;
+  }
   return workbook;
 }
 

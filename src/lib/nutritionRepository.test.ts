@@ -12,6 +12,8 @@ const recipeLines: RecipeIngredient[] = [
   { ingredient: afcdChickenBreastRaw, quantity: 400 },
   { ingredient: afcdWhiteRiceUncooked, quantity: 200 },
 ];
+const testRetention = { energy: 1, protein: 1, carbohydrates: 1, sugars: 1, fat: 1, saturatedFat: 1, sodium: 1, fibre: 1 } as const;
+const testRetentionSource = 'Test fixture only: explicit 100% retention factors; not a production recommendation.';
 
 describe('AFCD Release 3 meal calculation fixture', () => {
   it('calculates an ingredient portion from its sourced per-100-g profile', () => {
@@ -87,6 +89,7 @@ describe('SessionNutritionRepository', () => {
       recipeVersionId: recipe.id,
       batchCode: 'MEAL-2026-11-12-01',
       scaleFactor: 1,
+      retentionFactors: { ...testRetention }, retentionSource: testRetentionSource,
       additions: [],
       discardedMaterials: [],
       cookedBatchWeightGrams: 520,
@@ -102,6 +105,38 @@ describe('SessionNutritionRepository', () => {
     expect(await repository.listBatches('unknown-version')).toEqual([]);
   });
 
+  it('records a combined meal from separate measured curry and mash batches with component leftovers', async () => {
+    const repository = new SessionNutritionRepository();
+    const curryRecipe = await repository.saveRecipeVersion({ name: 'Curry sausages', ingredients: recipeLines, servings: 2 });
+    const mashRecipe = await repository.saveRecipeVersion({
+      name: 'Mashed potato', ingredients: [{ ingredient: afcdWhiteRiceUncooked, quantity: 300 }], servings: 2,
+    });
+    const curryBatch = await repository.createBatch({
+      recipeVersionId: curryRecipe.id, batchCode: 'CUR-01', scaleFactor: 1, retentionFactors: { ...testRetention }, retentionSource: testRetentionSource, additions: [], discardedMaterials: [],
+      cookedBatchWeightGrams: 800, portionWeightGrams: 400,
+    });
+    const mashBatch = await repository.createBatch({
+      recipeVersionId: mashRecipe.id, batchCode: 'MASH-01', scaleFactor: 1, retentionFactors: { ...testRetention }, retentionSource: testRetentionSource, additions: [], discardedMaterials: [],
+      cookedBatchWeightGrams: 500, portionWeightGrams: 200,
+    });
+
+    const meal = await repository.createMealAssembly({
+      mealName: 'Curry sausages and mash', batchCode: 'MEAL-01',
+      components: [
+        { batchRecordId: curryBatch.id, portionWeightGrams: 400 },
+        { batchRecordId: mashBatch.id, portionWeightGrams: 200 },
+      ],
+    });
+
+    expect(meal.calculation.isValid).toBe(true);
+    expect(meal.calculation.servingWeightGrams).toBe(600);
+    expect(meal.calculation.portions).toBe(2);
+    expect(meal.calculation.finishedMealWeightGrams).toBe(1200);
+    expect(meal.calculation.componentAllocations.map((component) => component.weightLeftoverGrams)).toEqual([0, 100]);
+    meal.components[0].portionWeightGrams = 1;
+    expect((await repository.listMealAssemblies())[0].components[0].portionWeightGrams).toBe(400);
+  });
+
   it('rejects empty names, invalid servings, unknown versions and invalid batch math', async () => {
     const repository = new SessionNutritionRepository();
     await expect(repository.saveRecipeVersion({ name: ' ', ingredients: recipeLines, servings: 2 })).rejects.toThrow('Enter a recipe name');
@@ -109,10 +144,12 @@ describe('SessionNutritionRepository', () => {
     const recipe = await repository.saveRecipeVersion({ name: 'Dish', ingredients: recipeLines, servings: 2 });
     await expect(repository.createBatch({
       recipeVersionId: 'missing', batchCode: 'B-1', scaleFactor: 1, additions: [], discardedMaterials: [],
+      retentionFactors: { ...testRetention }, retentionSource: testRetentionSource,
       cookedBatchWeightGrams: 500, portionWeightGrams: 250,
     })).rejects.toThrow('saved recipe version');
     await expect(repository.createBatch({
       recipeVersionId: recipe.id, batchCode: 'B-1', scaleFactor: 1, additions: [], discardedMaterials: [],
+      retentionFactors: { ...testRetention }, retentionSource: testRetentionSource,
       cookedBatchWeightGrams: 0, portionWeightGrams: 250,
     })).rejects.toThrow('Measured cooked batch weight');
     expect(await repository.listBatches()).toHaveLength(0);

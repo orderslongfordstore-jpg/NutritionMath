@@ -3,6 +3,12 @@ export interface Ingredient {
   name: string;
   code?: string;
   brand?: string;
+  category?: string;
+  barcode?: string;
+  sourceType?: IngredientSourceType;
+  sourceReference?: string;
+  sourceUrl?: string;
+  sourceStatus?: IngredientSourceStatus;
   energy: number;
   protein: number;
   carbohydrates: number;
@@ -15,6 +21,9 @@ export interface Ingredient {
   allergens: string[];
   origin?: string;
 }
+
+export type IngredientSourceType = 'manual' | 'afcd' | 'manufacturer-label' | 'estimate';
+export type IngredientSourceStatus = 'unverified' | 'source-checked' | 'user-verified' | 'estimated';
 
 export interface RecipeIngredient {
   ingredient: Ingredient;
@@ -45,6 +54,9 @@ export interface SavedRecipe {
 export interface BatchCalculationInput {
   recipeVersion: RecipeVersion;
   scaleFactor: number;
+  /** Required, explicitly sourced fractions applied after cooking and before declared discards. */
+  retentionFactors: Partial<Record<keyof NutrientValues, number>>;
+  retentionSource: string;
   additions: RecipeIngredient[];
   discardedMaterials: RecipeIngredient[];
   cookedBatchWeightGrams: number;
@@ -79,11 +91,57 @@ export interface BatchRecord {
   batchCode: string;
   recordedAt: string;
   scaleFactor: number;
+  retentionFactors: Partial<Record<keyof NutrientValues, number>>;
+  retentionSource: string;
+  recipeIngredients: RecipeIngredient[];
   additions: RecipeIngredient[];
   discardedMaterials: RecipeIngredient[];
   cookedBatchWeightGrams: number;
   portionWeightGrams: number;
   calculation: BatchNutritionSummary;
+}
+
+export interface MealComponentInput {
+  batchRecordId: string;
+  portionWeightGrams: number;
+}
+
+export interface MealAssemblyInput {
+  mealName: string;
+  batchCode: string;
+  components: MealComponentInput[];
+}
+
+export interface MealComponentAllocation {
+  batchRecordId: string;
+  componentName: string;
+  componentBatchCode: string;
+  componentPortionWeightGrams: number;
+  componentAvailableWeightGrams: number;
+  weightUsedGrams: number;
+  weightLeftoverGrams: number;
+  perPortionNutrients: NutrientValues;
+}
+
+export interface MealAssemblyCalculation {
+  servingWeightGrams: number;
+  portions: number;
+  finishedMealWeightGrams: number;
+  componentAllocations: MealComponentAllocation[];
+  totalNutrients: NutrientValues;
+  perServing: NutrientValues;
+  per100g: NutrientValues;
+  isValid: boolean;
+  issues: NutritionCalculationIssue[];
+}
+
+export interface MealAssemblyRecord {
+  id: string;
+  mealName: string;
+  batchCode: string;
+  recordedAt: string;
+  components: MealComponentInput[];
+  calculation: MealAssemblyCalculation;
 }
 
 export interface NutritionCalculationIssue {

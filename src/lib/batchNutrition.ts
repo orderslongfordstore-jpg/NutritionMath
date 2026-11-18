@@ -146,7 +146,8 @@ const emptySummary = (): BatchNutritionSummary => ({
  * The measured cooked weight is never inferred from raw input weight. Added and
  * discarded lines are scaled with the recipe; discarded lines must describe
  * the measured discarded material's nutrient profile, not its uncooked source.
- * Nutrient retention is assumed except for explicitly recorded discards.
+ * Nutrient retention is never inferred. User-entered 0..1 factors are required
+ * for every nutrient and applied after cooking, before measured-output discards.
  */
 export function calculateBatchNutrition(input: BatchCalculationInput): BatchNutritionSummary {
   const result = emptySummary();
@@ -197,15 +198,29 @@ export function calculateBatchNutrition(input: BatchCalculationInput): BatchNutr
   const baseTotals = exactNutrientTotals(baseLines);
   const additionTotals = exactNutrientTotals(additionLines);
   const discardTotals = exactNutrientTotals(discardedLines);
+  if (typeof input?.retentionSource !== 'string' || !input.retentionSource.trim()) {
+    addIssue(issues, 'retention_source_missing', 'Enter a source or method for the explicit nutrient-retention factors.');
+  }
   const totalNutrients = emptyNutrients();
   for (const nutrient of Object.keys(totalNutrients) as Array<keyof NutrientValues>) {
+    const factor = input?.retentionFactors?.[nutrient];
+    if (typeof factor !== 'number' || !Number.isFinite(factor) || factor < 0 || factor > 1) {
+      addIssue(issues, 'retention_factor_invalid', `Enter an explicit ${nutrient} retention factor from 0% to 100%; no default is assumed.`);
+      continue;
+    }
     const available = baseTotals[nutrient] + additionTotals[nutrient];
     if (!Number.isFinite(available) || available < 0 || available > MAX_VALUE) {
       addIssue(issues, 'batch_numeric_overflow', `${nutrient} input exceeds the supported calculation range.`);
       totalNutrients[nutrient] = 0;
       continue;
     }
-    const retained = available - discardTotals[nutrient];
+    const postCooking = available * factor;
+    if (!Number.isFinite(postCooking) || postCooking < 0 || postCooking > MAX_VALUE) {
+      addIssue(issues, 'batch_numeric_overflow', `Post-cooking ${nutrient} amount exceeds the supported calculation range.`);
+      totalNutrients[nutrient] = 0;
+      continue;
+    }
+    const retained = postCooking - discardTotals[nutrient];
     if (!Number.isFinite(retained) || retained < 0 || retained > MAX_VALUE) {
       addIssue(issues, 'discard_nutrients_exceed_input', `Recorded discarded ${nutrient} exceeds the available batch amount.`);
       totalNutrients[nutrient] = 0;

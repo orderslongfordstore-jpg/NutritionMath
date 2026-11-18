@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { calculateRecipeTotals, roundToTwo } from '../lib/nutrition';
 import type { Ingredient, RecipeIngredient, RecipeVersion, SavedRecipe } from '../types';
+import { normalizeMassToGrams, type MassUnit } from '../lib/units';
 import { SectionCard } from './SectionCard';
 
 type RecipeBuilderProps = {
@@ -42,6 +43,7 @@ export function RecipeBuilder({
 }: RecipeBuilderProps) {
   const [selectedIngredientId, setSelectedIngredientId] = useState(ingredients[0]?.id ?? '');
   const [quantity, setQuantity] = useState('100');
+  const [quantityUnit, setQuantityUnit] = useState<MassUnit>('g');
   const [savedVersionId, setSavedVersionId] = useState('');
   const [formError, setFormError] = useState('');
   const selectedId = ingredients.some((ingredient) => ingredient.id === selectedIngredientId)
@@ -61,9 +63,10 @@ export function RecipeBuilder({
       return;
     }
 
-    const quantityGrams = Number(quantity);
-    if (!Number.isFinite(quantityGrams) || quantityGrams <= 0 || quantityGrams > Number.MAX_SAFE_INTEGER) {
-      setFormError('Enter a finite ingredient quantity greater than zero.');
+    const enteredAmount = Number(quantity);
+    const quantityGrams = normalizeMassToGrams(enteredAmount, quantityUnit);
+    if (quantityGrams === null || quantityGrams <= 0) {
+      setFormError('Enter a finite positive quantity in grams or kilograms. The recipe stores exact mass in grams.');
       return;
     }
 
@@ -139,18 +142,19 @@ export function RecipeBuilder({
               ))}
             </select>
           </label>
-          <label>
-            Quantity (g)
-            <input
-              type="number"
-              min="0.01"
-              max={Number.MAX_SAFE_INTEGER}
-              step="any"
-              inputMode="decimal"
-              value={quantity}
-              onChange={(event) => setQuantity(event.target.value)}
-            />
-          </label>
+          <div className="two-column-grid">
+            <label>
+              Ingredient quantity
+              <input type="number" min="0.001" max={Number.MAX_SAFE_INTEGER} step="any" inputMode="decimal" value={quantity} onChange={(event) => setQuantity(event.target.value)} />
+            </label>
+            <label>
+              Mass unit
+              <select value={quantityUnit} onChange={(event) => setQuantityUnit(event.target.value as MassUnit)}>
+                <option value="g">g</option>
+                <option value="kg">kg</option>
+              </select>
+            </label>
+          </div>
           <label>
             Servings
             <input

@@ -19,6 +19,8 @@ const recipeVersion: RecipeVersion = {
 const baseInput: BatchCalculationInput = {
   recipeVersion,
   scaleFactor: 1,
+  retentionFactors: { energy: 1, protein: 1, carbohydrates: 1, sugars: 1, fat: 1, saturatedFat: 1, sodium: 1, fibre: 1 },
+  retentionSource: 'Test fixture only: explicit 100% retention factors; not a production recommendation.',
   additions: [{ ingredient: water, quantity: 400 }],
   discardedMaterials: [{ ingredient: drainedCookingLiquid, quantity: 50 }],
   cookedBatchWeightGrams: 850,
@@ -69,6 +71,20 @@ describe('calculateBatchNutrition', () => {
     expect(result.portions).toBe(4);
     expect(result.per100g).toEqual(calculateBatchNutrition(baseInput).per100g);
     expect(result.perServing).toEqual(calculateBatchNutrition(baseInput).perServing);
+  });
+
+  it('applies explicit non-100% factors and refuses missing factors or their source', () => {
+    const retained = calculateBatchNutrition({ ...baseInput, retentionFactors: { ...baseInput.retentionFactors, energy: 0.5 } });
+    const missingFactor = calculateBatchNutrition({ ...baseInput, retentionFactors: { ...baseInput.retentionFactors, energy: undefined } });
+    const missingSource = calculateBatchNutrition({ ...baseInput, retentionSource: ' ' });
+
+    expect(retained.isValid).toBe(true);
+    expect(retained.totalNutrients.energy).toBe(2246);
+    expect(retained.per100g.energy).toBe(280.75);
+    expect(missingFactor.isValid).toBe(false);
+    expect(missingFactor.issues.some((entry) => entry.code === 'retention_factor_invalid' && entry.message.includes('energy'))).toBe(true);
+    expect(missingSource.isValid).toBe(false);
+    expect(missingSource.issues.some((entry) => entry.code === 'retention_source_missing')).toBe(true);
   });
 
   it('reports net cooking weight gain instead of assuming loss when measured cooked yield is higher', () => {
