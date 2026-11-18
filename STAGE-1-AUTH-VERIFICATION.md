@@ -4,6 +4,8 @@
 
 **Status: not complete.** The independent NutritionMath project was used to create and confirm a dedicated test account, sign in and out, and validate a real authenticated API request. A password-reset email arrived, but its one-time link returned `otp_expired` at its first observed use, so a password update and login with a changed password are **not verified**. Do not begin Stage 2. This report records work on 19 November 2026 (Australia/Sydney).
 
+See [STAGE-1-AUTH-RESOLUTION-PLAN.md](STAGE-1-AUTH-RESOLUTION-PLAN.md) for the proposed investigation, fixes and acceptance checks; the plan does not claim that these issues are resolved.
+
 ## Independent project and scope
 
 - Twominds' **NutritionMath** project is separate from the previously shared NutrientsMath/NutritionPro project. Local `VITE_SUPABASE_URL` and `SUPABASE_URL` resolve to the new project; the frontend and backend use matching public keys from that project.
