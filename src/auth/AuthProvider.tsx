@@ -222,10 +222,14 @@ async function waitForCallbackEvent(): Promise<boolean> {
   }
 }
 
-export type AuthNotice = { kind: 'callback' | 'unavailable' | 'sign-out' | 'recovery-storage'; text: string };
+export type AuthNotice = { kind: 'callback' | 'unavailable' | 'sign-out' | 'recovery-storage' | 'session-unusable'; text: string };
+
+const expiredSessionNotice: AuthNotice = { kind: 'session-unusable', text: 'Your session has expired. Check your connection and try again, or sign in again.' };
+const unverifiedSessionNotice: AuthNotice = { kind: 'session-unusable', text: 'Your session could not be verified. Check your connection and try again, or sign in again.' };
 
 export interface AuthContextValue {
   session: Session | null;
+  hasUnusableSession: boolean;
   loading: boolean;
   configured: boolean;
   configurationError: string | null;
@@ -245,10 +249,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [recovery, setRecovery] = useState(false);
   const [notice, setNotice] = useState<AuthNotice | null>(null);
   const [storageNotice, setStorageNotice] = useState<AuthNotice | null>(null);
+  const [expiryTick, setExpiryTick] = useState(0);
   const currentSession = useRef<Session | null>(null);
   const sessionEventVersion = useRef(0);
   const signingOut = useRef(false);
   const clearedDuringSignOut = useRef(false);
+
+  // Supabase expires_at is an absolute Unix timestamp in seconds.
+  const expiry = typeof session?.expires_at === 'number' && Number.isFinite(session.expires_at * 1000)
+    ? session.expires_at * 1000 : null;
+  const expiryNotice = !session ? null : expiry === null ? unverifiedSessionNotice
+    : expiry <= Date.now() ? expiredSessionNotice : null;
+  const exposedSession = expiryNotice ? null : session;
+
+  useEffect(() => {
+    if (!session) return;
+    const checkExpiry = () => setExpiryTick(tick => tick + 1);
+    const remaining = expiry === null ? 0 : expiry - Date.now();
+    // Browsers clamp longer delays to a signed 32-bit integer; recheck then.
+    const timer = remaining > 0 ? setTimeout(checkExpiry, Math.min(remaining, 2_147_483_647)) : undefined;
+    // The deadline may have passed between the render and running this effect.
+    if (remaining <= 0 && exposedSession) checkExpiry();
+    document.addEventListener('visibilitychange', checkExpiry);
+    window.addEventListener('focus', checkExpiry);
+    window.addEventListener('pageshow', checkExpiry);
+    return () => {
+      if (timer !== undefined) clearTimeout(timer);
+      document.removeEventListener('visibilitychange', checkExpiry);
+      window.removeEventListener('focus', checkExpiry);
+      window.removeEventListener('pageshow', checkExpiry);
+    };
+  }, [session, expiry, expiryTick]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -397,7 +428,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ session, loading, configured: Boolean(supabase), configurationError, recovery, notice: storageNotice ?? notice, dismissNotice, signOut, completeRecovery }}>
+    <AuthContext.Provider value={{ session: exposedSession, hasUnusableSession: Boolean(expiryNotice), loading, configured: Boolean(supabase), configurationError, recovery, notice: storageNotice ?? notice ?? expiryNotice, dismissNotice, signOut, completeRecovery }}>
       {children}
     </AuthContext.Provider>
   );

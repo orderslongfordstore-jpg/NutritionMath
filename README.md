@@ -1,6 +1,6 @@
 # NutritionMath
 
-NutritionMath is an independent Australian nutrition and food-production platform. This branch implements **Stage 1: foundation, authentication and dashboard**. Ingredients, recipes, calculations, labels and other later modules are not yet operational. See [ROADMAP.md](ROADMAP.md) for the staged plan and [SUPABASE-SETUP.md](SUPABASE-SETUP.md) for the current independent-project status and authentication-readiness checklist.
+NutritionMath is an independent Australian nutrition and food-production platform. This branch implements **Stage 1: foundation, authentication and dashboard**. Ingredients, recipes, calculations, labels and other later modules are not yet operational. See [ROADMAP.md](ROADMAP.md) for the staged plan and [STAGE-1-AUTH-VERIFICATION.md](STAGE-1-AUTH-VERIFICATION.md) for current authentication results and outstanding blockers.
 
 ## Technology
 
@@ -31,7 +31,7 @@ Previously, local development pointed at the **NutrientsMath** Supabase project,
 
 Both the browser and server reject the former project's known direct hostname. This cannot detect a custom domain or proxy pointing to the same project, or prove that another URL is independent: verify project ownership and identity before configuring it. Vite also rejects known Supabase `sb_secret_` and `service_role` JWT formats in `VITE_` values; this is not a complete secret scanner.
 
-The client uses the official Supabase JavaScript client and project-scoped browser storage. Browser storage and access tokens are exposed to JavaScript running on the same origin; protect against XSS, restrict third-party scripts and use HTTPS in production. The Express `/api/me` endpoint validates access tokens through Supabase rather than trusting client-supplied user IDs. Publishable/anon keys are not authorization; future tables need appropriately scoped row-level security and business access checks. The recovery marker coordinates this app across browser tabs as a user-interface safeguard, not server-side authorization, and is not shared across devices or other applications.
+The client uses the official Supabase JavaScript client and project-scoped browser storage. Browser storage and access tokens are exposed to JavaScript running on the same origin; protect against XSS, restrict third-party scripts and use HTTPS in production. The Express `/api/me` endpoint validates access tokens through Supabase rather than trusting client-supplied user IDs. Publishable/anon keys are not authorization; future tables need appropriately scoped row-level security and business access checks. The recovery marker is a user-interface safeguard, not server-side authorization, and is not shared across devices or other applications. Its cross-tab event ordering has an identified unresolved race; see the [verification report](STAGE-1-AUTH-VERIFICATION.md) before production use.
 
 This application currently uses the SDK's **implicit email-link flow** and the current page URL as its callback. It does not implement a dedicated PKCE code exchange or token-hash verification route. Do not change email templates to a code-only or token-hash-only flow and assume it works; implement and test that flow first if required.
 

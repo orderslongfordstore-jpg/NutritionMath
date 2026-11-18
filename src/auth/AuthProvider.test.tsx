@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({ createClient: vi.fn() }));
 vi.mock('@supabase/supabase-js', () => ({ createClient: mocks.createClient }));
 
 type Callback = (event: AuthChangeEvent, session: Session | null) => void;
-const account = { user: { id: 'user-1', email: 'chef@example.com' } } as Session;
+const account = { expires_at: 4102444800, user: { id: 'user-1', email: 'chef@example.com' } } as Session;
 let callbacks: Callback[];
 let getSession: ReturnType<typeof vi.fn>;
 let signOut: ReturnType<typeof vi.fn>;
@@ -134,7 +134,7 @@ describe('AuthProvider', () => {
     await waitFor(() => expect(getSession).toHaveBeenCalled());
     emit('PASSWORD_RECOVERY', account);
     expect(screen.getByRole('status').textContent).toBe('user-1:true');
-    emit('SIGNED_IN', { user: { id: 'user-2' } } as Session);
+    emit('SIGNED_IN', { expires_at: 4102444800, user: { id: 'user-2' } } as Session);
     expect(screen.getByRole('status').textContent).toBe('user-2:false');
     emit('SIGNED_OUT', null);
     expect(screen.getByRole('status').textContent).toBe('none:false');

@@ -7,6 +7,7 @@ import { AuthPage } from './AuthPage';
 const mocks = vi.hoisted(() => ({
   state: {
     session: null as null | { user: { id: string; email: string } },
+    hasUnusableSession: false,
     loading: false,
     configured: true,
     recovery: false,
@@ -30,7 +31,7 @@ vi.mock('./AuthProvider', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
-  Object.assign(mocks.state, { session: null, loading: false, configured: true, recovery: false, notice: null });
+  Object.assign(mocks.state, { session: null, hasUnusableSession: false, loading: false, configured: true, recovery: false, notice: null });
   mocks.state.signOut.mockResolvedValue(undefined);
   mocks.auth.signInWithPassword.mockResolvedValue({ error: null });
   mocks.auth.signUp.mockResolvedValue({ data: { session: null }, error: null });

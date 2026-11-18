@@ -14,8 +14,8 @@ vi.mock('../components/Dashboard', () => ({
 
 type Listener = (event: AuthChangeEvent, session: Session | null) => void;
 type MockClient = { listeners: Listener[]; signOut: ReturnType<typeof vi.fn>; getSession: ReturnType<typeof vi.fn> };
-const account = { user: { id: 'user-1', email: 'one@example.com' } } as Session;
-const otherAccount = { user: { id: 'user-2', email: 'two@example.com' } } as Session;
+const account = { expires_at: 4102444800, user: { id: 'user-1', email: 'one@example.com' } } as Session;
+const otherAccount = { expires_at: 4102444800, user: { id: 'user-2', email: 'two@example.com' } } as Session;
 const prefix = 'nutritionmath.auth.https%3A%2F%2Fexample.supabase.co';
 const userOneKey = `${prefix}.recovery.user-1`;
 let clients: MockClient[];

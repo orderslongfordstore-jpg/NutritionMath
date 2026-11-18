@@ -1,5 +1,7 @@
 # Independent Supabase setup
 
+> This setup record predates the live account tests. For current results and remaining blockers, see [STAGE-1-AUTH-VERIFICATION.md](STAGE-1-AUTH-VERIFICATION.md).
+
 ## Project
 
 With the owner's approval, an independent project named **NutritionMath** was created in the **Twominds** organization in Sydney (`ap-southeast-2`). Its project reference is `bcmtvcueiuvntuovizno` and its API URL is `https://bcmtvcueiuvntuovizno.supabase.co`. Supabase reported it `ACTIVE_HEALTHY`. The confirmed project quote was $0/month on the organization's Free plan; plan and usage limits apply.

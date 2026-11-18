@@ -13,7 +13,7 @@ vi.mock('../components/Dashboard', () => ({
 }));
 
 type Callback = (event: AuthChangeEvent, session: Session | null) => void;
-const account = { user: { id: 'user-1', email: 'chef@example.com' } } as Session;
+const account = { expires_at: 4102444800, user: { id: 'user-1', email: 'chef@example.com' } } as Session;
 let callbacks: Callback[];
 let initialize: ReturnType<typeof vi.fn>;
 let getSession: ReturnType<typeof vi.fn>;

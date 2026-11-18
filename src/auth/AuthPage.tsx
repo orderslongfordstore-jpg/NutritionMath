@@ -39,7 +39,7 @@ function callbackUrl(): string {
 }
 
 export function AuthPage() {
-  const { session, loading, configured, configurationError, recovery, notice: authNotice, dismissNotice, signOut, completeRecovery } = useAuth();
+  const { session, hasUnusableSession, loading, configured, configurationError, recovery, notice: authNotice, dismissNotice, signOut, completeRecovery } = useAuth();
   const [mode, setMode] = useState<Mode>('sign-in');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -185,8 +185,8 @@ export function AuthPage() {
                   <button className="nm-auth__text-button" type="button" onClick={() => changeMode('reset')}>Request a new password reset link</button>{' · '}
                   <button className="nm-auth__text-button" type="button" onClick={() => changeMode('resend')}>Resend confirmation email</button>
                 </p>}
-                {(authNotice.kind === 'unavailable' || authNotice.kind === 'recovery-storage') && <p><button className="nm-auth__text-button" type="button" onClick={() => window.location.reload()}>Try again</button></p>}
-                {authNotice.kind !== 'recovery-storage' && <button className="nm-auth__text-button" type="button" onClick={dismissNotice}>{session ? 'Continue to your account' : 'Dismiss'}</button>}
+                {(authNotice.kind === 'unavailable' || authNotice.kind === 'recovery-storage' || authNotice.kind === 'session-unusable') && <p><button className="nm-auth__text-button" type="button" onClick={() => window.location.reload()}>Try again</button></p>}
+                {authNotice.kind !== 'recovery-storage' && authNotice.kind !== 'session-unusable' && <button className="nm-auth__text-button" type="button" onClick={dismissNotice}>{session ? 'Continue to your account' : 'Dismiss'}</button>}
               </div>}
               {isSignedIn ? (
               <div className="nm-auth__signed-in">
@@ -233,6 +233,7 @@ export function AuthPage() {
                   </div>
                 )}
                 {isRecovery && <div className="nm-auth__switch"><button className="nm-auth__text-button" type="button" disabled={busy} onClick={handleSignOut}>Cancel and sign out</button></div>}
+                {hasUnusableSession && <div className="nm-auth__switch"><button className="nm-auth__text-button" type="button" disabled={busy} onClick={handleSignOut}>{busy ? 'Signing out…' : 'Sign out'}</button></div>}
               </>
               )}
             </>}
