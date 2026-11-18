@@ -1,5 +1,7 @@
 # Independent NutritionMath authentication: configuration and readiness
 
+> Historical review completed before the independent project was approved and created. For its current configuration and outstanding tests, see [SUPABASE-SETUP.md](SUPABASE-SETUP.md).
+
 **Status, 19 November 2026:** NutritionMath is prepared to be pointed at a dedicated Supabase project, but no such project has been created, selected or configured in this work. Live authentication is **not yet verified**. Stage 2 has not begun. Author: Manus AI.
 
 ## What currently shares infrastructure

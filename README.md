@@ -1,6 +1,6 @@
 # NutritionMath
 
-NutritionMath is an independent Australian nutrition and food-production platform. This branch implements **Stage 1: foundation, authentication and dashboard**. Ingredients, recipes, calculations, labels and other later modules are not yet operational. See [ROADMAP.md](ROADMAP.md) for the staged plan and [INDEPENDENT-AUTH-REPORT.md](INDEPENDENT-AUTH-REPORT.md) for the current isolation and authentication-readiness review.
+NutritionMath is an independent Australian nutrition and food-production platform. This branch implements **Stage 1: foundation, authentication and dashboard**. Ingredients, recipes, calculations, labels and other later modules are not yet operational. See [ROADMAP.md](ROADMAP.md) for the staged plan and [SUPABASE-SETUP.md](SUPABASE-SETUP.md) for the current independent-project status and authentication-readiness checklist.
 
 ## Technology
 
@@ -10,12 +10,12 @@ React, TypeScript and Vite on the client; Node.js and Express on the server; Sup
 
 - Node.js 22.22.2 or later in the 22.x line (the development version is specified in `.nvmrc`; other supported versions are listed in `package.json`).
 - pnpm 11.25.0, for example via Corepack.
-- A **separate NutritionMath Supabase project** with email/password authentication, after its creation or selection has been approved. Do not use the previous shared NutritionPro project. No project is provisioned by this repository.
+- A **separate NutritionMath Supabase project** with email/password authentication. An independent Sydney project has been created with the owner's approval; see [SUPABASE-SETUP.md](SUPABASE-SETUP.md). Do not use the previous shared NutritionPro project. No project is automatically provisioned by this repository.
 
 ## Local development and configuration
 
 1. Install dependencies: `pnpm install --frozen-lockfile`.
-2. Copy `.env.example` to `.env`. It contains blank Supabase values. Leave them blank until an independent project is approved and available. With no configuration, the app shows setup guidance instead of signing in.
+2. If `.env` does not already exist, copy `.env.example` to `.env`. The example contains blank Supabase values; don't overwrite an existing `.env` without preserving it first. The current development workspace has been configured locally with the approved independent project, but the ignored `.env` is not committed. For other checkouts, enter the independent project's values as described below. With no configuration, the app shows setup guidance instead of signing in.
 3. From the independent project's dashboard, enter its project URL and a **publishable or legacy anon key** as `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. Use the same project URL as `SUPABASE_URL` and a publishable/anon key from the same project as `SUPABASE_ANON_KEY`. The key pairs may be the same or distinct public keys for the same project. Do not use a service-role or secret key. `.env` and `.env.*` other than `.env.example` are ignored by Git.
 4. Configure and verify that independent project's email/password provider, confirmation policy, email delivery, Site URL and allowed redirects before live account testing. The client sends the current origin and pathname, excluding query and fragment. For a root-page visit at the normal Vite development address the callback is `http://localhost:5173/`; `127.0.0.1`, a different port, path or trailing-slash form is a different URL. Use the actual printed development address and exact approved production HTTPS address. Do not alter the former shared project. See the report for the compatible email-link flow and setup checklist.
 5. Run `pnpm dev` and open the Vite URL printed in the console. The dev server proxies `/api` to Express at the configured `PORT` (default 3000). Vite loads mode-specific environment files; Express loads `.env` and process environment variables. Confirm that both resolve to the same independent project.
@@ -27,7 +27,7 @@ Before deploying, verify that the Vite build and the server runtime use the same
 
 ## Authentication and security
 
-Until this follow-up, local development pointed at the **NutrientsMath** Supabase project, a shared authentication pool containing NutritionPro tables. A project-specific browser storage key did not isolate its remote users, passwords, policies or email configuration. The local workspace is now disconnected, and an independent project has not yet been created or selected. No shared-project users, passwords, settings or data have been changed in this follow-up. Existing accounts and sessions are not automatically migrated to a new project.
+Previously, local development pointed at the **NutrientsMath** Supabase project, a shared authentication pool containing NutritionPro tables. A project-specific browser storage key did not isolate its remote users, passwords, policies or email configuration. The local workspace now points at the separate approved NutritionMath project in Sydney. No shared-project users, passwords, settings or data were changed during this switch. Existing accounts and sessions are not automatically migrated to the independent project.
 
 Both the browser and server reject the former project's known direct hostname. This cannot detect a custom domain or proxy pointing to the same project, or prove that another URL is independent: verify project ownership and identity before configuring it. Vite also rejects known Supabase `sb_secret_` and `service_role` JWT formats in `VITE_` values; this is not a complete secret scanner.
 
